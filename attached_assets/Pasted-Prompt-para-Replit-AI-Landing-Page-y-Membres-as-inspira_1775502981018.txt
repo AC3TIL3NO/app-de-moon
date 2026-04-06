@@ -1,0 +1,255 @@
+Prompt para Replit AI — Landing Page y Membresías inspiradas en Moon Pilates
+
+Personaliza la landing page pública y la sección de membresías de mi app SaaS para estudios de pilates usando la identidad visual y el contenido de Moon Pilates Studio.
+
+Objetivo
+
+La landing debe verse premium, moderna y minimalista, inspirada en Stripe, Notion, Apple y la estética limpia de Moon Pilates.
+
+Usar:
+
+Nombre: Moon Pilates Studio
+Eslogan: “Movimiento consciente para cuerpo y mente”
+Estilo: elegante, minimalista y premium
+Colores:
+Fondo blanco
+Beige suave
+Negro suave
+Morado tenue (#7C3AED)
+Navbar
+
+Crear una navbar transparente al inicio que cambie a fondo blanco con sombra suave al hacer scroll.
+
+Elementos:
+
+Logo a la izquierda
+Menú:
+Inicio
+Clases
+Membresías
+Nosotros
+Contacto
+Botón destacado:
+“Reservar clase”
+
+Agregar animación suave al hacer scroll y menú responsive en móvil.
+
+Hero Principal
+
+Diseño de pantalla completa con:
+
+Fondo elegante con imagen de Pilates Reformer
+Overlay suave
+Texto grande a la izquierda
+Imagen o mockup de la app a la derecha
+
+Contenido:
+
+Título: “Moon Pilates Studio”
+
+Subtítulo: “Somos movimiento consciente para cuerpo y mente.”
+
+Texto secundario: “Clases de Pilates Reformer, privadas y grupales, diseñadas para ayudarte a fortalecer tu cuerpo, mejorar tu postura y conectar contigo.”
+
+Botones:
+
+Quiero empezar hoy
+Ver membresías
+
+Agregar:
+
+Framer Motion
+Fade in
+Slide up
+Efecto hover elegante
+Sección: Cómo reservar tu clase
+
+Crear 4 cards horizontales con iconos y animación:
+
+Elige tu clase
+Contáctanos
+Confirma tu cupo
+Disfruta tu clase
+
+Cada card debe tener:
+
+Icono de Lucide React
+Número grande
+Título
+Descripción breve
+
+Diseño:
+
+rounded-3xl
+sombra ligera
+hover con elevación
+Sección: Sobre Nosotros
+
+Diseño de dos columnas:
+
+Izquierda: texto
+Derecha: imagen grande de estudio de pilates
+
+Texto:
+
+“En Moon Pilates Studio trabajamos principalmente con Pilates Reformer, integrando fuerza, control y fluidez a través de resistencia progresiva y movimiento guiado.
+
+Complementamos la práctica con Chair, Magic Circle, fitballs, bandas, sliders y otros accesorios para crear una experiencia completa y personalizada.”
+
+Agregar debajo 3 badges:
+
+Privadas
+Semi privadas
+Grupales
+Sección: Tipos de Clases
+
+Crear 5 cards premium para clases:
+
+Reformer Básico
+B/.25
+Ideal para comenzar
+Reformer Intermedio
+B/.30
+Más fuerza y control
+Reformer Avanzado
+B/.35
+Intensidad y técnica
+Pilates Integral
+B/.40
+Trabajo completo del cuerpo
+Clase Privada
+B/.25
+Atención personalizada
+
+Cada card debe tener:
+
+Imagen
+Nombre
+Precio
+Descripción
+Botón “Reservar”
+
+Usar:
+
+Hover con scale
+Sombra suave
+Gradiente morado tenue
+Sección: Membresías
+
+Crear una sección con 3 planes.
+
+Diseño:
+
+3 cards
+La card central debe estar destacada y un poco más grande
+Hover con elevación
+Etiqueta “Más popular” en el plan central
+
+Planes:
+
+Moon Start
+8 clases al mes
+B/.120
+Ideal para 2 clases por semana
+
+Beneficios:
+
+8 clases
+Acceso a grupales
+Soporte por WhatsApp
+Moon Flow
+12 clases al mes
+B/.160
+Ideal para progreso constante
+
+Beneficios:
+
+12 clases
+Prioridad de reserva
+Seguimiento personalizado
+Moon Unlimited
+Clases ilimitadas
+B/.220
+Incluye prioridad de reserva
+
+Beneficios:
+
+Clases ilimitadas
+Reserva prioritaria
+Clases privadas y grupales
+Atención personalizada
+
+Todos los planes deben tener:
+
+Botón “Comprar paquete”
+Animaciones con Framer Motion
+Bordes rounded-3xl
+Mucho espacio en blanco
+Beneficios
+
+Crear una sección con iconos:
+
+Reserva prioritaria
+Atención personalizada
+Acceso a clases privadas y grupales
+Seguimiento de progreso
+WhatsApp directo
+
+Diseño:
+
+Grid responsive
+Cards pequeñas con iconos
+Sección: Ubicación y Contacto
+
+Diseño dividido en dos columnas:
+
+Izquierda: información
+Derecha: mapa o mockup del mapa
+
+Información:
+
+Dirección: Atrio Mall, Costa del Este, piso 2, local C-16
+WhatsApp: +507 6586-9949
+Correo: moonpilatesstudiopty@gmail.com
+
+Agregar botones:
+
+Abrir en Google Maps
+Escribir por WhatsApp
+
+Agregar íconos de:
+
+Mapa
+WhatsApp
+Email
+Footer
+
+Footer elegante con:
+
+Logo
+Nombre Moon Pilates Studio
+Redes sociales
+Links rápidos
+Copyright
+Requisitos visuales
+
+Usar:
+
+React + Tailwind
+Framer Motion
+Lucide React
+Responsive total
+Mucho espacio en blanco
+Tipografía moderna
+Cards con rounded-3xl
+shadow-lg
+Transiciones suaves
+
+Agregar:
+
+Skeleton loaders
+Empty states
+Transiciones entre secciones
+Aparición animada al hacer scroll
+
+Crear todos los componentes reutilizables y dejar la landing lista para producción.
