@@ -25,18 +25,18 @@ interface Summary {
   pendiente: number;
 }
 
-const METHOD_OPTS = ["Todos", "Stripe", "Efectivo", "Yappy", "Transferencia", "Otro"];
+const METHOD_OPTS = ["Todos", "PayPal", "Yappy", "Efectivo", "Transferencia", "Otro"];
 const STATUS_OPTS = ["Todos", "paid", "pending"];
 
 function methodLabel(m: string) {
-  return m === "Stripe" ? "Tarjeta (Stripe)" : m;
+  return m === "PayPal" ? "Tarjeta / PayPal" : m;
 }
 
 function methodIcon(m: string) {
   if (m === "Efectivo") return <Banknote className="h-4 w-4 text-emerald-500" />;
   if (m === "Yappy") return <Smartphone className="h-4 w-4 text-green-600" />;
-  if (m === "Stripe") return <CreditCard className="h-4 w-4 text-violet-500" />;
-  if (m === "Transferencia") return <ArrowUpRight className="h-4 w-4 text-blue-500" />;
+  if (m === "PayPal" || m === "Tarjeta") return <CreditCard className="h-4 w-4 text-blue-500" />;
+  if (m === "Transferencia") return <ArrowUpRight className="h-4 w-4 text-indigo-500" />;
   return <DollarSign className="h-4 w-4 text-gray-400" />;
 }
 

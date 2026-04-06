@@ -28,6 +28,7 @@ import logoBlack from "@assets/Moon_Pilates_Studio_Logo_TEXTO_NEGRO_177550367948
 import { useClientAuth } from "@/contexts/clientAuth";
 import { AuthModal } from "@/components/AuthModal";
 import { BookingModal } from "@/components/BookingModal";
+import { PaymentModal } from "@/components/PaymentModal";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -169,22 +170,27 @@ const BENEFITS = [
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "").replace("/landing", "") + "/api";
 
 function CardIcons({ dark = false }: { dark?: boolean }) {
-  const opacity = dark ? "opacity-60" : "opacity-50";
+  const bg = dark ? "#374151" : "#f3f4f6";
+  const op = dark ? "opacity-70" : "opacity-60";
   return (
-    <div className={`flex items-center justify-center gap-2 mt-3 ${opacity}`}>
-      <svg viewBox="0 0 50 32" className="h-5 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="50" height="32" rx="4" fill={dark ? "#374151" : "#f3f4f6"}/>
+    <div className={`flex items-center justify-center gap-2 mt-3 ${op}`}>
+      <svg viewBox="0 0 50 32" className="h-5 w-auto" fill="none">
+        <rect width="50" height="32" rx="4" fill={bg}/>
         <text x="25" y="21" textAnchor="middle" fontSize="9" fontWeight="bold" fill={dark ? "#60a5fa" : "#1d4ed8"}>VISA</text>
       </svg>
-      <svg viewBox="0 0 50 32" className="h-5 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="50" height="32" rx="4" fill={dark ? "#374151" : "#f3f4f6"}/>
+      <svg viewBox="0 0 50 32" className="h-5 w-auto" fill="none">
+        <rect width="50" height="32" rx="4" fill={bg}/>
         <circle cx="20" cy="16" r="9" fill="#eb001b" opacity="0.9"/>
         <circle cx="30" cy="16" r="9" fill="#f79e1b" opacity="0.9"/>
         <path d="M25 9.4a9 9 0 0 1 0 13.2A9 9 0 0 1 25 9.4z" fill="#ff5f00"/>
       </svg>
-      <svg viewBox="0 0 50 32" className="h-5 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="50" height="32" rx="4" fill={dark ? "#374151" : "#f3f4f6"}/>
-        <text x="25" y="21" textAnchor="middle" fontSize="7.5" fontWeight="bold" fill={dark ? "#9ca3af" : "#374151"}>AMEX</text>
+      <svg viewBox="0 0 50 32" className="h-5 w-auto" fill="none">
+        <rect width="50" height="32" rx="4" fill={dark ? "#166534" : "#dcfce7"}/>
+        <text x="25" y="21" textAnchor="middle" fontSize="7" fontWeight="bold" fill={dark ? "#86efac" : "#15803d"}>Yappy</text>
+      </svg>
+      <svg viewBox="0 0 50 32" className="h-5 w-auto" fill="none">
+        <rect width="50" height="32" rx="4" fill={bg}/>
+        <text x="25" y="21" textAnchor="middle" fontSize="7" fontWeight="bold" fill={dark ? "#9ca3af" : "#6b7280"}>Efectivo</text>
       </svg>
     </div>
   );
@@ -197,7 +203,8 @@ export default function LandingPage() {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [preselectedClass, setPreselectedClass] = useState<{ name: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<typeof MEMBERSHIPS[0] | null>(null);
   const [pendingPlan, setPendingPlan] = useState<typeof MEMBERSHIPS[0] | null>(null);
   const { client } = useClientAuth();
   const [, navigate] = useLocation();
@@ -238,38 +245,14 @@ export default function LandingPage() {
     }
   };
 
-  const handleComprarPaquete = async (plan: typeof MEMBERSHIPS[0]) => {
+  const handleComprarPaquete = (plan: typeof MEMBERSHIPS[0]) => {
     if (!client) {
       setPendingPlan(plan);
       setAuthOpen(true);
       return;
     }
-    setCheckoutLoading(plan.name);
-    try {
-      const token = localStorage.getItem("moon_client_token") ?? "";
-      const res = await fetch(`${API_BASE}/payments/create-checkout-session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          clientId: client.id,
-          concept: "Membresía",
-          membershipName: plan.name,
-          price: plan.numericPrice,
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        showToast(err.error ?? "Error al iniciar el pago. Intenta de nuevo.");
-        return;
-      }
-      const { url } = await res.json();
-      if (url) window.location.href = url;
-      else showToast("Error: no se recibio URL de pago");
-    } catch {
-      showToast("Error de conexion. Intenta de nuevo.");
-    } finally {
-      setCheckoutLoading(null);
-    }
+    setSelectedPlan(plan);
+    setPaymentModalOpen(true);
   };
 
   return (
@@ -783,22 +766,13 @@ export default function LandingPage() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleComprarPaquete(plan)}
-                  disabled={checkoutLoading === plan.name}
-                  className={`w-full py-3.5 rounded-2xl font-semibold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-70 ${
+                  className={`w-full py-3.5 rounded-2xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
                     plan.highlight
                       ? "bg-violet-600 text-white hover:bg-violet-500 shadow-lg shadow-violet-900/20"
                       : "bg-gray-900 text-white hover:bg-violet-600"
                   }`}
                 >
-                  {checkoutLoading === plan.name ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/>
-                      </svg>
-                      Cargando...
-                    </>
-                  ) : plan.cta}
+                  {plan.cta}
                 </motion.button>
                 <CardIcons dark={plan.highlight} />
               </motion.div>
@@ -1065,7 +1039,7 @@ export default function LandingPage() {
           if (pendingPlan) {
             const plan = pendingPlan;
             setPendingPlan(null);
-            setTimeout(() => handleComprarPaquete(plan), 100);
+            setTimeout(() => { setSelectedPlan(plan); setPaymentModalOpen(true); }, 100);
           } else {
             setBookingOpen(true);
           }
@@ -1081,6 +1055,20 @@ export default function LandingPage() {
         onSuccess={() => {
           setBookingOpen(false);
           showToast("Reserva confirmada. Te esperamos en Moon Pilates Studio.");
+        }}
+      />
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={paymentModalOpen}
+        plan={selectedPlan}
+        onClose={() => { setPaymentModalOpen(false); setSelectedPlan(null); }}
+        onSuccess={(method) => {
+          if (method === "PayPal") {
+            showToast("Pago confirmado. Tu membresía fue activada.");
+          } else if (method === "Yappy") {
+            showToast("Solicitud registrada. Confirmaremos tu Yappy pronto.");
+          }
         }}
       />
 
