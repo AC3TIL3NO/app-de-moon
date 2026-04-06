@@ -20,7 +20,9 @@ import {
   Zap,
   Heart,
 } from "lucide-react";
-import heroBg from "@/assets/hero-bg.jpg";
+import heroBg from "@assets/40b756_86a22044bf6b4d728b69b627f57b50ec~mv2_1775503320084.avif";
+import studioBg from "@assets/40b756_4f1dc1bd9ca941efa4af8c07e580dd1b~mv2_1775503621543.avif";
+import logoBlack from "@assets/Moon_Pilates_Studio_Logo_TEXTO_NEGRO_1775503679484.png";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -181,18 +183,13 @@ export default function LandingPage() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-6 h-18 flex items-center justify-between py-4">
-          <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 bg-violet-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm">
-              M
-            </div>
-            <div>
-              <div className={`text-[15px] font-bold tracking-tight leading-none transition-colors ${scrolled ? "text-gray-900" : "text-white"}`}>
-                Moon Pilates
-              </div>
-              <div className={`text-[10px] tracking-widest uppercase transition-colors ${scrolled ? "text-gray-400" : "text-white/60"}`}>
-                Studio
-              </div>
-            </div>
+          <div className="flex items-center">
+            <img
+              src={logoBlack}
+              alt="Moon Pilates Studio"
+              className={`h-10 w-auto object-contain transition-all duration-500 ${scrolled ? "brightness-0" : "brightness-0 invert"}`}
+              style={{ maxWidth: 180 }}
+            />
           </div>
 
           <div className="hidden md:flex items-center gap-8">
@@ -515,7 +512,7 @@ export default function LandingPage() {
             className="relative"
           >
             <div className="aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl">
-              <img src={heroBg} alt="Moon Pilates Studio" className="w-full h-full object-cover" />
+              <img src={studioBg} alt="Moon Pilates Studio" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-violet-900/30 to-transparent rounded-3xl" />
             </div>
             <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-xl p-5 w-48">
@@ -559,7 +556,7 @@ export default function LandingPage() {
                 className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 group transition-all duration-300"
               >
                 <div className="h-44 bg-gradient-to-br from-violet-50 to-stone-100 relative overflow-hidden">
-                  <img src={heroBg} alt={cls.title} className="w-full h-full object-cover opacity-60 group-hover:opacity-75 transition-opacity duration-500 group-hover:scale-105 transform" />
+                  <img src={i % 2 === 0 ? heroBg : studioBg} alt={cls.title} className="w-full h-full object-cover opacity-70 group-hover:opacity-85 transition-opacity duration-500 group-hover:scale-105 transform" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                   <div className="absolute top-4 left-4">
                     <span className={`text-xs font-semibold px-3 py-1 rounded-full ${cls.badgeColor}`}>
@@ -858,15 +855,15 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-4 gap-10 mb-12">
             <div className="md:col-span-2">
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="h-9 w-9 bg-violet-600 rounded-xl flex items-center justify-center text-white font-bold text-sm">
-                  M
-                </div>
-                <div>
-                  <div className="text-white font-bold">Moon Pilates Studio</div>
-                  <div className="text-xs text-gray-600">Movimiento consciente para cuerpo y mente</div>
-                </div>
+              <div className="flex items-center mb-4">
+                <img
+                  src={logoBlack}
+                  alt="Moon Pilates Studio"
+                  className="h-9 w-auto object-contain brightness-0 invert"
+                  style={{ maxWidth: 180 }}
+                />
               </div>
+              <div className="text-xs text-gray-500 mb-4">Movimiento consciente para cuerpo y mente</div>
               <p className="text-sm text-gray-600 max-w-xs leading-relaxed">
                 Especialistas en Pilates Reformer. Clases privadas y grupales en Costa del Este, Panamá.
               </p>
