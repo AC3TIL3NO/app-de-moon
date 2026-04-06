@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import {
   useListMemberships,
   useCreateMembership,
   useDeleteMembership,
   useListClientMemberships,
   useDeleteClientMembership,
+  useCreateCheckoutSession,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -20,12 +22,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Trash2, Plus, CreditCard, Users } from "lucide-react";
+import { Trash2, Plus, CreditCard, Users, ShoppingCart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Memberships() {
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <motion.div
+      className="space-y-8"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+    >
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">Membresías</h1>
         <p className="text-muted-foreground mt-2">Gestiona planes de membresía y asignaciones a clientes.</p>
@@ -35,13 +42,14 @@ export default function Memberships() {
         <MembershipPlansSection />
         <ClientMembershipsSection />
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 function MembershipPlansSection() {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const checkout = useCreateCheckoutSession();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -201,15 +209,41 @@ function MembershipPlansSection() {
                     <span className="font-semibold text-foreground">€{plan.price}</span>
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground hover:text-destructive shrink-0 ml-2"
-                  onClick={() => deleteMutation.mutate({ id: plan.id })}
-                  disabled={deleteMutation.isPending}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1 shrink-0 ml-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs gap-1.5"
+                    disabled={checkout.isPending}
+                    onClick={() => {
+                      checkout.mutate(
+                        { data: { membershipId: plan.id, clientId: 1 } },
+                        {
+                          onSuccess: (data) => {
+                            if (data.url) {
+                              window.open(data.url, "_blank");
+                            } else {
+                              toast({ title: "Stripe no está configurado", description: "Conecta tu cuenta de Stripe para procesar pagos.", variant: "destructive" });
+                            }
+                          },
+                          onError: () => toast({ title: "Error al iniciar pago", variant: "destructive" }),
+                        }
+                      );
+                    }}
+                  >
+                    <ShoppingCart className="h-3.5 w-3.5" />
+                    Comprar
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => deleteMutation.mutate({ id: plan.id })}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

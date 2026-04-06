@@ -18,8 +18,10 @@ import type {
 
 import type {
   AttendanceRecord,
+  CheckoutSessionResult,
   Client,
   ClientMembership,
+  CreateCheckoutSessionBody,
   CreateClassBody,
   CreateClientBody,
   CreateClientMembershipBody,
@@ -27,14 +29,19 @@ import type {
   CreateMembershipBody,
   CreateReservationBody,
   DashboardSummary,
+  HandleStripeWebhook200,
   HealthStatus,
   Instructor,
   MarkAttendanceBody,
   MembershipPlan,
+  NotificationResult,
   OccupancyItem,
+  Payment,
   PilatesClass,
+  PopularClassItem,
   Reservation,
   TopClientItem,
+  WeeklyAttendanceItem,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -2325,7 +2332,7 @@ export function useGetDashboardOccupancy<
 }
 
 /**
- * @summary Get top clients by reservations
+ * @summary Get top clients by classes attended
  */
 export const getGetDashboardTopClientsUrl = () => {
   return `/api/dashboard/top-clients`;
@@ -2377,7 +2384,7 @@ export type GetDashboardTopClientsQueryResult = NonNullable<
 export type GetDashboardTopClientsQueryError = ErrorType<unknown>;
 
 /**
- * @summary Get top clients by reservations
+ * @summary Get top clients by classes attended
  */
 
 export function useGetDashboardTopClients<
@@ -2392,6 +2399,489 @@ export function useGetDashboardTopClients<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetDashboardTopClientsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get attendance count grouped by day of week
+ */
+export const getGetDashboardWeeklyAttendanceUrl = () => {
+  return `/api/dashboard/weekly-attendance`;
+};
+
+export const getDashboardWeeklyAttendance = async (
+  options?: RequestInit,
+): Promise<WeeklyAttendanceItem[]> => {
+  return customFetch<WeeklyAttendanceItem[]>(
+    getGetDashboardWeeklyAttendanceUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetDashboardWeeklyAttendanceQueryKey = () => {
+  return [`/api/dashboard/weekly-attendance`] as const;
+};
+
+export const getGetDashboardWeeklyAttendanceQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDashboardWeeklyAttendance>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDashboardWeeklyAttendance>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetDashboardWeeklyAttendanceQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getDashboardWeeklyAttendance>>
+  > = ({ signal }) =>
+    getDashboardWeeklyAttendance({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDashboardWeeklyAttendance>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDashboardWeeklyAttendanceQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDashboardWeeklyAttendance>>
+>;
+export type GetDashboardWeeklyAttendanceQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get attendance count grouped by day of week
+ */
+
+export function useGetDashboardWeeklyAttendance<
+  TData = Awaited<ReturnType<typeof getDashboardWeeklyAttendance>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDashboardWeeklyAttendance>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDashboardWeeklyAttendanceQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get reservations grouped by class type
+ */
+export const getGetDashboardPopularClassesUrl = () => {
+  return `/api/dashboard/popular-classes`;
+};
+
+export const getDashboardPopularClasses = async (
+  options?: RequestInit,
+): Promise<PopularClassItem[]> => {
+  return customFetch<PopularClassItem[]>(getGetDashboardPopularClassesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDashboardPopularClassesQueryKey = () => {
+  return [`/api/dashboard/popular-classes`] as const;
+};
+
+export const getGetDashboardPopularClassesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDashboardPopularClasses>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDashboardPopularClasses>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetDashboardPopularClassesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getDashboardPopularClasses>>
+  > = ({ signal }) => getDashboardPopularClasses({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDashboardPopularClasses>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDashboardPopularClassesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDashboardPopularClasses>>
+>;
+export type GetDashboardPopularClassesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get reservations grouped by class type
+ */
+
+export function useGetDashboardPopularClasses<
+  TData = Awaited<ReturnType<typeof getDashboardPopularClasses>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDashboardPopularClasses>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDashboardPopularClassesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Send a WhatsApp test reminder for a reservation
+ */
+export const getSendTestNotificationUrl = (id: number) => {
+  return `/api/notifications/send-test/${id}`;
+};
+
+export const sendTestNotification = async (
+  id: number,
+  options?: RequestInit,
+): Promise<NotificationResult> => {
+  return customFetch<NotificationResult>(getSendTestNotificationUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSendTestNotificationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendTestNotification>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendTestNotification>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["sendTestNotification"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendTestNotification>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return sendTestNotification(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendTestNotificationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendTestNotification>>
+>;
+
+export type SendTestNotificationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Send a WhatsApp test reminder for a reservation
+ */
+export const useSendTestNotification = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendTestNotification>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof sendTestNotification>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getSendTestNotificationMutationOptions(options));
+};
+
+/**
+ * @summary Create a Stripe Checkout session for a membership
+ */
+export const getCreateCheckoutSessionUrl = () => {
+  return `/api/payments/create-checkout-session`;
+};
+
+export const createCheckoutSession = async (
+  createCheckoutSessionBody: CreateCheckoutSessionBody,
+  options?: RequestInit,
+): Promise<CheckoutSessionResult> => {
+  return customFetch<CheckoutSessionResult>(getCreateCheckoutSessionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createCheckoutSessionBody),
+  });
+};
+
+export const getCreateCheckoutSessionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCheckoutSession>>,
+    TError,
+    { data: BodyType<CreateCheckoutSessionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCheckoutSession>>,
+  TError,
+  { data: BodyType<CreateCheckoutSessionBody> },
+  TContext
+> => {
+  const mutationKey = ["createCheckoutSession"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCheckoutSession>>,
+    { data: BodyType<CreateCheckoutSessionBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCheckoutSession(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCheckoutSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCheckoutSession>>
+>;
+export type CreateCheckoutSessionMutationBody =
+  BodyType<CreateCheckoutSessionBody>;
+export type CreateCheckoutSessionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a Stripe Checkout session for a membership
+ */
+export const useCreateCheckoutSession = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCheckoutSession>>,
+    TError,
+    { data: BodyType<CreateCheckoutSessionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createCheckoutSession>>,
+  TError,
+  { data: BodyType<CreateCheckoutSessionBody> },
+  TContext
+> => {
+  return useMutation(getCreateCheckoutSessionMutationOptions(options));
+};
+
+/**
+ * @summary Handle Stripe webhook events
+ */
+export const getHandleStripeWebhookUrl = () => {
+  return `/api/payments/webhook`;
+};
+
+export const handleStripeWebhook = async (
+  options?: RequestInit,
+): Promise<HandleStripeWebhook200> => {
+  return customFetch<HandleStripeWebhook200>(getHandleStripeWebhookUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getHandleStripeWebhookMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof handleStripeWebhook>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof handleStripeWebhook>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["handleStripeWebhook"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof handleStripeWebhook>>,
+    void
+  > = () => {
+    return handleStripeWebhook(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type HandleStripeWebhookMutationResult = NonNullable<
+  Awaited<ReturnType<typeof handleStripeWebhook>>
+>;
+
+export type HandleStripeWebhookMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Handle Stripe webhook events
+ */
+export const useHandleStripeWebhook = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof handleStripeWebhook>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof handleStripeWebhook>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getHandleStripeWebhookMutationOptions(options));
+};
+
+/**
+ * @summary List all payments
+ */
+export const getListPaymentsUrl = () => {
+  return `/api/payments`;
+};
+
+export const listPayments = async (
+  options?: RequestInit,
+): Promise<Payment[]> => {
+  return customFetch<Payment[]>(getListPaymentsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPaymentsQueryKey = () => {
+  return [`/api/payments`] as const;
+};
+
+export const getListPaymentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPayments>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPayments>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPaymentsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPayments>>> = ({
+    signal,
+  }) => listPayments({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPayments>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPaymentsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPayments>>
+>;
+export type ListPaymentsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all payments
+ */
+
+export function useListPayments<
+  TData = Awaited<ReturnType<typeof listPayments>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPayments>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPaymentsQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

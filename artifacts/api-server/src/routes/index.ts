@@ -6,6 +6,8 @@ import classesRouter from "./classes";
 import reservationsRouter from "./reservations";
 import dashboardRouter from "./dashboard";
 import membershipsRouter from "./memberships";
+import notificationsRouter from "./notifications";
+import paymentsRouter from "./payments";
 
 const router: IRouter = Router();
 
@@ -16,5 +18,7 @@ router.use(classesRouter);
 router.use(reservationsRouter);
 router.use(dashboardRouter);
 router.use(membershipsRouter);
+router.use(notificationsRouter);
+router.use(paymentsRouter);
 
 export default router;

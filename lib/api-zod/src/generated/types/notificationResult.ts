@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface TopClientItem {
-  clientName: string;
-  classesAttended: number;
+export interface NotificationResult {
+  success: boolean;
+  message: string;
 }

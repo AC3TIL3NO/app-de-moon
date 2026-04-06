@@ -418,12 +418,83 @@ export const GetDashboardOccupancyResponse = zod.array(
 );
 
 /**
- * @summary Get top clients by reservations
+ * @summary Get top clients by classes attended
  */
 export const GetDashboardTopClientsResponseItem = zod.object({
   clientName: zod.string(),
-  reservationsCount: zod.number(),
+  classesAttended: zod.number(),
 });
 export const GetDashboardTopClientsResponse = zod.array(
   GetDashboardTopClientsResponseItem,
 );
+
+/**
+ * @summary Get attendance count grouped by day of week
+ */
+export const GetDashboardWeeklyAttendanceResponseItem = zod.object({
+  day: zod.string(),
+  label: zod.string(),
+  attended: zod.number(),
+});
+export const GetDashboardWeeklyAttendanceResponse = zod.array(
+  GetDashboardWeeklyAttendanceResponseItem,
+);
+
+/**
+ * @summary Get reservations grouped by class type
+ */
+export const GetDashboardPopularClassesResponseItem = zod.object({
+  type: zod.string(),
+  count: zod.number(),
+});
+export const GetDashboardPopularClassesResponse = zod.array(
+  GetDashboardPopularClassesResponseItem,
+);
+
+/**
+ * @summary Send a WhatsApp test reminder for a reservation
+ */
+export const SendTestNotificationParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const SendTestNotificationResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string(),
+});
+
+/**
+ * @summary Create a Stripe Checkout session for a membership
+ */
+export const CreateCheckoutSessionBody = zod.object({
+  clientId: zod.number(),
+  membershipId: zod.number(),
+  membershipName: zod.string(),
+  price: zod.number(),
+});
+
+export const CreateCheckoutSessionResponse = zod.object({
+  url: zod.string(),
+  sessionId: zod.string(),
+});
+
+/**
+ * @summary Handle Stripe webhook events
+ */
+export const HandleStripeWebhookResponse = zod.object({
+  received: zod.boolean(),
+});
+
+/**
+ * @summary List all payments
+ */
+export const ListPaymentsResponseItem = zod.object({
+  id: zod.number(),
+  clientId: zod.number(),
+  membershipId: zod.number(),
+  amount: zod.number(),
+  stripeSessionId: zod.string().optional(),
+  status: zod.string(),
+  createdAt: zod.string(),
+});
+export const ListPaymentsResponse = zod.array(ListPaymentsResponseItem);

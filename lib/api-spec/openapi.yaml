@@ -494,7 +494,7 @@ paths:
     get:
       operationId: getDashboardTopClients
       tags: [dashboard]
-      summary: Get top clients by reservations
+      summary: Get top clients by classes attended
       responses:
         "200":
           description: Top clients
@@ -504,6 +504,107 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TopClientItem"
+
+  /dashboard/weekly-attendance:
+    get:
+      operationId: getDashboardWeeklyAttendance
+      tags: [dashboard]
+      summary: Get attendance count grouped by day of week
+      responses:
+        "200":
+          description: Weekly attendance data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WeeklyAttendanceItem"
+
+  /dashboard/popular-classes:
+    get:
+      operationId: getDashboardPopularClasses
+      tags: [dashboard]
+      summary: Get reservations grouped by class type
+      responses:
+        "200":
+          description: Popular classes data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PopularClassItem"
+
+  /notifications/send-test/{id}:
+    post:
+      operationId: sendTestNotification
+      tags: [notifications]
+      summary: Send a WhatsApp test reminder for a reservation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationResult"
+
+  /payments/create-checkout-session:
+    post:
+      operationId: createCheckoutSession
+      tags: [payments]
+      summary: Create a Stripe Checkout session for a membership
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckoutSessionBody"
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSessionResult"
+
+  /payments/webhook:
+    post:
+      operationId: handleStripeWebhook
+      tags: [payments]
+      summary: Handle Stripe webhook events
+      responses:
+        "200":
+          description: Webhook handled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                required:
+                  - received
+
+  /payments:
+    get:
+      operationId: listPayments
+      tags: [payments]
+      summary: List all payments
+      responses:
+        "200":
+          description: List of payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Payment"
 
 components:
   schemas:
@@ -911,8 +1012,97 @@ components:
       properties:
         clientName:
           type: string
-        reservationsCount:
+        classesAttended:
           type: integer
       required:
         - clientName
-        - reservationsCount
+        - classesAttended
+
+    WeeklyAttendanceItem:
+      type: object
+      properties:
+        day:
+          type: string
+        label:
+          type: string
+        attended:
+          type: integer
+      required:
+        - day
+        - label
+        - attended
+
+    PopularClassItem:
+      type: object
+      properties:
+        type:
+          type: string
+        count:
+          type: integer
+      required:
+        - type
+        - count
+
+    NotificationResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+        - message
+
+    CreateCheckoutSessionBody:
+      type: object
+      properties:
+        clientId:
+          type: integer
+        membershipId:
+          type: integer
+        membershipName:
+          type: string
+        price:
+          type: number
+      required:
+        - clientId
+        - membershipId
+        - membershipName
+        - price
+
+    CheckoutSessionResult:
+      type: object
+      properties:
+        url:
+          type: string
+        sessionId:
+          type: string
+      required:
+        - url
+        - sessionId
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: integer
+        membershipId:
+          type: integer
+        amount:
+          type: number
+        stripeSessionId:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - clientId
+        - membershipId
+        - amount
+        - status
+        - createdAt

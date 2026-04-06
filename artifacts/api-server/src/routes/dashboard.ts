@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, classesTable, clientsTable, reservationsTable, instructorsTable } from "@workspace/db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and } from "drizzle-orm";
 import {
   GetDashboardSummaryResponse,
   GetTodayClassesResponse,
@@ -98,17 +98,67 @@ router.get("/dashboard/top-clients", async (_req, res): Promise<void> => {
   const rows = await db
     .select({
       clientName: clientsTable.name,
-      reservationsCount: sql<number>`count(${reservationsTable.id})::int`,
+      classesAttended: sql<number>`count(${reservationsTable.id})::int`,
     })
     .from(reservationsTable)
     .leftJoin(clientsTable, eq(reservationsTable.clientId, clientsTable.id))
+    .where(eq(reservationsTable.attended, true))
     .groupBy(clientsTable.name)
     .orderBy(desc(sql`count(${reservationsTable.id})`))
-    .limit(8);
+    .limit(5);
 
   res.json(rows.map((r) => ({
     clientName: r.clientName ?? "Desconocido",
-    reservationsCount: r.reservationsCount,
+    classesAttended: r.classesAttended,
+  })));
+});
+
+const DAY_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+const DAY_LABELS: Record<string, string> = {
+  Lunes: "Lun", Martes: "Mar", Miércoles: "Mié", Jueves: "Jue",
+  Viernes: "Vie", Sábado: "Sáb", Domingo: "Dom",
+};
+
+router.get("/dashboard/weekly-attendance", async (_req, res): Promise<void> => {
+  const rows = await db
+    .select({
+      dayOfWeek: classesTable.dayOfWeek,
+      attended: sql<number>`count(${reservationsTable.id})::int`,
+    })
+    .from(reservationsTable)
+    .leftJoin(classesTable, eq(reservationsTable.classId, classesTable.id))
+    .where(eq(reservationsTable.attended, true))
+    .groupBy(classesTable.dayOfWeek)
+    .orderBy(classesTable.dayOfWeek);
+
+  const map: Record<string, number> = {};
+  for (const r of rows) {
+    if (r.dayOfWeek) map[r.dayOfWeek] = r.attended;
+  }
+
+  const data = DAY_ORDER.map((day) => ({
+    day,
+    label: DAY_LABELS[day] ?? day,
+    attended: map[day] ?? 0,
+  }));
+
+  res.json(data);
+});
+
+router.get("/dashboard/popular-classes", async (_req, res): Promise<void> => {
+  const rows = await db
+    .select({
+      type: classesTable.type,
+      count: sql<number>`count(${reservationsTable.id})::int`,
+    })
+    .from(reservationsTable)
+    .leftJoin(classesTable, eq(reservationsTable.classId, classesTable.id))
+    .groupBy(classesTable.type)
+    .orderBy(desc(sql`count(${reservationsTable.id})`));
+
+  res.json(rows.map((r) => ({
+    type: r.type ?? "Otro",
+    count: r.count,
   })));
 });
 

@@ -6,7 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface TopClientItem {
-  clientName: string;
-  classesAttended: number;
+export interface WeeklyAttendanceItem {
+  day: string;
+  label: string;
+  attended: number;
 }

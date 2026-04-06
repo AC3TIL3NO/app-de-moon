@@ -244,5 +244,47 @@ export interface OccupancyItem {
 
 export interface TopClientItem {
   clientName: string;
-  reservationsCount: number;
+  classesAttended: number;
 }
+
+export interface WeeklyAttendanceItem {
+  day: string;
+  label: string;
+  attended: number;
+}
+
+export interface PopularClassItem {
+  type: string;
+  count: number;
+}
+
+export interface NotificationResult {
+  success: boolean;
+  message: string;
+}
+
+export interface CreateCheckoutSessionBody {
+  clientId: number;
+  membershipId: number;
+  membershipName: string;
+  price: number;
+}
+
+export interface CheckoutSessionResult {
+  url: string;
+  sessionId: string;
+}
+
+export interface Payment {
+  id: number;
+  clientId: number;
+  membershipId: number;
+  amount: number;
+  stripeSessionId?: string;
+  status: string;
+  createdAt: string;
+}
+
+export type HandleStripeWebhook200 = {
+  received: boolean;
+};

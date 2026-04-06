@@ -7,10 +7,12 @@
  */
 
 export * from "./attendanceRecord";
+export * from "./checkoutSessionResult";
 export * from "./client";
 export * from "./clientMembership";
 export * from "./clientMembershipStatus";
 export * from "./clientPlan";
+export * from "./createCheckoutSessionBody";
 export * from "./createClassBody";
 export * from "./createClassBodyLevel";
 export * from "./createClassBodyType";
@@ -21,15 +23,20 @@ export * from "./createInstructorBody";
 export * from "./createMembershipBody";
 export * from "./createReservationBody";
 export * from "./dashboardSummary";
+export * from "./handleStripeWebhook200";
 export * from "./healthStatus";
 export * from "./instructor";
 export * from "./markAttendanceBody";
 export * from "./membershipPlan";
+export * from "./notificationResult";
 export * from "./occupancyItem";
+export * from "./payment";
 export * from "./pilatesClass";
 export * from "./pilatesClassLevel";
 export * from "./pilatesClassStatus";
 export * from "./pilatesClassType";
+export * from "./popularClassItem";
 export * from "./reservation";
 export * from "./reservationStatus";
 export * from "./topClientItem";
+export * from "./weeklyAttendanceItem";
