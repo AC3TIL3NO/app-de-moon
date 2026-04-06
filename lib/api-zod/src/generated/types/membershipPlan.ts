@@ -9,7 +9,7 @@
 export interface MembershipPlan {
   id: number;
   name: string;
-  description?: string;
+  description?: string | null;
   totalClasses: number;
   price: number;
   durationDays: number;

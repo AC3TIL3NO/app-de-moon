@@ -12,5 +12,5 @@ export interface CreateMembershipBody {
   totalClasses: number;
   price: number;
   durationDays: number;
-  active?: boolean;
+  active: boolean;
 }

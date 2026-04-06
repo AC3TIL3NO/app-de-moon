@@ -1,0 +1,323 @@
+# Prompt para Replit AI — Fase 3: Convertir la app de Pilates en un SaaS listo para vender
+
+Convierte mi app actual de gestión para estudios de pilates en una plataforma SaaS multi-estudio, profesional y lista para producción.
+
+La app ya tiene:
+
+* Login
+* Dashboard
+* Clientes
+* Clases
+* Reservas
+* Instructores
+* Asistencia
+* Membresías
+* Pagos con Stripe
+* Recordatorios por WhatsApp
+* Dashboard con gráficas
+
+Stack actual:
+
+* Frontend: React + Next.js + Tailwind + Framer Motion
+* Backend: Node.js + Express
+* Base de datos: PostgreSQL
+* TypeScript estricto
+
+---
+
+# 1. Multi-estudio / Multi-tenant
+
+Crear tabla PostgreSQL:
+
+```sql
+studios (
+  id,
+  name,
+  slug,
+  logoUrl,
+  primaryColor,
+  secondaryColor,
+  phone,
+  email,
+  address,
+  createdAt
+)
+```
+
+Actualizar tablas:
+
+* users
+* clients
+* instructors
+* classes
+* bookings
+* memberships
+* payments
+
+Agregar `studioId` como foreign key.
+
+Reglas:
+
+* Cada usuario pertenece a un estudio.
+* Ningún estudio puede ver información de otro.
+* Filtrar automáticamente todas las consultas por `studioId`.
+* El login debe identificar a qué estudio pertenece el usuario.
+
+---
+
+# 2. Roles y permisos
+
+Agregar roles:
+
+* ADMIN
+* RECEPTIONIST
+* INSTRUCTOR
+
+Actualizar tabla `users`:
+
+```sql
+role ENUM('ADMIN','RECEPTIONIST','INSTRUCTOR')
+```
+
+Permisos:
+
+* ADMIN:
+
+  * acceso total
+* RECEPTIONIST:
+
+  * puede crear clientes, reservas y cobrar
+  * no puede borrar pagos ni modificar configuración
+* INSTRUCTOR:
+
+  * solo puede ver sus clases, alumnos y asistencia
+
+Backend:
+
+* Middleware `requireRole()`
+* Proteger rutas según rol
+
+Frontend:
+
+* Mostrar/ocultar secciones del sidebar según el rol
+* Mostrar mensajes de “No autorizado”
+
+---
+
+# 3. Configuración del estudio
+
+Nueva página “Configuración”.
+
+Campos:
+
+* Nombre del estudio
+* Logo
+* Dirección
+* Teléfono
+* Correo
+* Horarios
+* Redes sociales
+* Política de cancelación
+
+Permitir subir logo e imagen de fondo.
+
+Backend:
+
+* Endpoint GET `/studio/settings`
+* Endpoint PATCH `/studio/settings`
+
+---
+
+# 4. Branding dinámico
+
+Permitir que cada estudio personalice:
+
+* Color principal
+* Color secundario
+* Fondo del login
+* Logo
+
+Aplicar automáticamente el branding en:
+
+* Login
+* Sidebar
+* Botones
+* Dashboard
+* Cards
+
+Usar CSS variables o Tailwind theme dinámico.
+
+Ejemplo:
+
+```css
+--primary-color
+--secondary-color
+```
+
+---
+
+# 5. Landing page pública
+
+Crear una landing page elegante para vender la plataforma.
+
+Secciones:
+
+* Hero con mockup de la app
+* Beneficios
+* Funciones
+* Precios
+* Testimonios
+* FAQ
+* Botón “Prueba gratis”
+
+Diseño:
+
+* Muy moderno
+* Inspirado en Stripe + Notion + Linear
+* Animaciones suaves con Framer Motion
+
+Agregar 3 planes:
+
+* Básico
+* Pro
+* Premium
+
+---
+
+# 6. Reportes avanzados
+
+Crear nueva sección “Reportes”.
+
+Gráficas:
+
+* Ingresos mensuales
+* Nuevos clientes por mes
+* Cancelaciones
+* Ocupación por horario
+* Membresías vendidas
+
+Agregar filtros:
+
+* Hoy
+* Semana
+* Mes
+* Rango personalizado
+
+Permitir exportar:
+
+* Excel
+* PDF
+
+Backend endpoints:
+
+* GET `/reports/revenue`
+* GET `/reports/new-clients`
+* GET `/reports/cancellations`
+* GET `/reports/occupancy`
+* GET `/reports/memberships`
+
+---
+
+# 7. Seguridad real
+
+Implementar:
+
+* JWT access token
+* Refresh token
+* Hash de contraseñas con bcrypt
+* Middleware auth
+* Protección de rutas frontend y backend
+* Logout automático al expirar token
+
+Variables de entorno:
+
+```env
+JWT_SECRET=
+JWT_REFRESH_SECRET=
+```
+
+---
+
+# 8. Producción y deploy
+
+Preparar el proyecto para producción:
+
+* Dockerfile para frontend
+* Dockerfile para backend
+* docker-compose.yml
+* Variables de entorno
+* Scripts de build
+* Seeds automáticos
+
+Crear README con:
+
+* Cómo correr localmente
+* Cómo desplegar en Railway y Vercel
+* Cómo configurar Stripe y Twilio
+
+Deploy recomendado:
+
+* Frontend en Vercel
+* Backend + PostgreSQL en Railway
+
+---
+
+# 9. Experiencia visual premium
+
+La app debe sentirse como un SaaS moderno.
+
+Agregar:
+
+* Sidebar colapsable
+* Header elegante
+* Breadcrumbs
+* Skeleton loaders
+* Empty states ilustrados
+* Toasts
+* Animaciones suaves
+* Modales con blur
+* Tarjetas rounded-2xl
+* Sombras suaves
+* Responsive total
+
+Usar:
+
+* Framer Motion
+* Lucide React
+* Recharts
+* Tailwind
+
+Paleta:
+
+* Morado principal: #7C3AED
+* Fondo blanco/gris claro
+* Verde éxito
+* Rojo error
+* Amarillo advertencia
+
+---
+
+# 10. Datos demo
+
+Generar automáticamente:
+
+* 1 estudio demo
+* 3 usuarios con distintos roles
+* 10 clientes
+* 5 clases
+* 3 membresías
+* 10 reservas
+* 5 pagos
+
+---
+
+Implementa primero en este orden:
+
+1. Multi-estudio
+2. Roles
+3. Configuración
+4. Branding
+5. Landing page
+6. Reportes
+7. Seguridad
+8. Deploy

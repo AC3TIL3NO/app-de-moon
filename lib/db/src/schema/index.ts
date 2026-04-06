@@ -1,3 +1,5 @@
+export * from "./studios";
+export * from "./users";
 export * from "./instructors";
 export * from "./classes";
 export * from "./clients";

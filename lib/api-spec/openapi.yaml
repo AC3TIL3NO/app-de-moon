@@ -10,6 +10,12 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: studio
+    description: Studio settings operations
+  - name: reports
+    description: Analytics and reporting operations
   - name: classes
     description: Pilates class operations
   - name: clients
@@ -38,6 +44,143 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+
+  /studio/settings:
+    get:
+      operationId: getStudioSettings
+      tags: [studio]
+      summary: Get studio settings
+      responses:
+        "200":
+          description: Studio settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudioSettings"
+    patch:
+      operationId: updateStudioSettings
+      tags: [studio]
+      summary: Update studio settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStudioSettingsBody"
+      responses:
+        "200":
+          description: Updated studio settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudioSettings"
+
+  /reports/revenue:
+    get:
+      operationId: getRevenueReport
+      tags: [reports]
+      summary: Get monthly revenue report
+      responses:
+        "200":
+          description: Revenue by month
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RevenueItem"
+
+  /reports/new-clients:
+    get:
+      operationId: getNewClientsReport
+      tags: [reports]
+      summary: Get new clients per month
+      responses:
+        "200":
+          description: New clients by month
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NewClientsItem"
+
+  /reports/cancellations:
+    get:
+      operationId: getCancellationsReport
+      tags: [reports]
+      summary: Get cancellations per month
+      responses:
+        "200":
+          description: Cancellations by month
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CancellationsItem"
+
+  /reports/occupancy:
+    get:
+      operationId: getOccupancyReport
+      tags: [reports]
+      summary: Get occupancy by time slot
+      responses:
+        "200":
+          description: Occupancy by hour
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OccupancyReportItem"
+
+  /reports/memberships:
+    get:
+      operationId: getMembershipsReport
+      tags: [reports]
+      summary: Get memberships sold per month
+      responses:
+        "200":
+          description: Memberships by month
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MembershipsReportItem"
 
   /classes:
     get:
@@ -616,6 +759,180 @@ components:
       required:
         - status
 
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, RECEPTIONIST, INSTRUCTOR]
+        studioId:
+          type: integer
+        studioName:
+          type: string
+      required:
+        - id
+        - email
+        - name
+        - role
+        - studioId
+        - studioName
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/AuthUser"
+      required:
+        - token
+        - user
+
+    StudioSettings:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        logoUrl:
+          type: string
+          nullable: true
+        primaryColor:
+          type: string
+        secondaryColor:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        cancellationPolicy:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - slug
+        - primaryColor
+        - secondaryColor
+        - createdAt
+
+    UpdateStudioSettingsBody:
+      type: object
+      properties:
+        name:
+          type: string
+        logoUrl:
+          type: string
+        primaryColor:
+          type: string
+        secondaryColor:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        cancellationPolicy:
+          type: string
+
+    RevenueItem:
+      type: object
+      properties:
+        month:
+          type: string
+        total:
+          type: number
+        count:
+          type: integer
+      required:
+        - month
+        - total
+        - count
+
+    NewClientsItem:
+      type: object
+      properties:
+        month:
+          type: string
+        count:
+          type: integer
+      required:
+        - month
+        - count
+
+    CancellationsItem:
+      type: object
+      properties:
+        month:
+          type: string
+        cancelled:
+          type: integer
+        total:
+          type: integer
+      required:
+        - month
+        - cancelled
+        - total
+
+    OccupancyReportItem:
+      type: object
+      properties:
+        hour:
+          type: string
+        reservations:
+          type: integer
+        capacity:
+          type: integer
+        occupancyPct:
+          type: integer
+      required:
+        - hour
+        - reservations
+        - capacity
+        - occupancyPct
+
+    MembershipsReportItem:
+      type: object
+      properties:
+        month:
+          type: string
+        count:
+          type: integer
+        revenue:
+          type: number
+      required:
+        - month
+        - count
+        - revenue
+
     PilatesClass:
       type: object
       properties:
@@ -872,10 +1189,11 @@ components:
           type: string
         description:
           type: string
+          nullable: true
         totalClasses:
           type: integer
         price:
-          type: integer
+          type: number
         durationDays:
           type: integer
         active:
@@ -898,7 +1216,7 @@ components:
         totalClasses:
           type: integer
         price:
-          type: integer
+          type: number
         durationDays:
           type: integer
         active:
@@ -908,6 +1226,7 @@ components:
         - totalClasses
         - price
         - durationDays
+        - active
 
     ClientMembership:
       type: object
@@ -916,33 +1235,33 @@ components:
           type: integer
         clientId:
           type: integer
+        clientName:
+          type: string
         membershipId:
           type: integer
         membershipName:
-          type: string
-        clientName:
-          type: string
-        startDate:
-          type: string
-        endDate:
           type: string
         classesUsed:
           type: integer
         classesTotal:
           type: integer
+        startDate:
+          type: string
+        endDate:
+          type: string
         status:
           type: string
           enum: [Activa, Vencida, Agotada, Cancelada]
       required:
         - id
         - clientId
+        - clientName
         - membershipId
         - membershipName
-        - clientName
-        - startDate
-        - endDate
         - classesUsed
         - classesTotal
+        - startDate
+        - endDate
         - status
 
     CreateClientMembershipBody:
@@ -952,26 +1271,12 @@ components:
           type: integer
         membershipId:
           type: integer
-        membershipName:
-          type: string
-        clientName:
-          type: string
         startDate:
-          type: string
-        endDate:
-          type: string
-        classesTotal:
-          type: integer
-        status:
           type: string
       required:
         - clientId
         - membershipId
-        - membershipName
-        - clientName
         - startDate
-        - endDate
-        - classesTotal
 
     DashboardSummary:
       type: object
@@ -1057,27 +1362,23 @@ components:
     CreateCheckoutSessionBody:
       type: object
       properties:
-        clientId:
-          type: integer
         membershipId:
           type: integer
-        membershipName:
-          type: string
-        price:
-          type: number
+        clientId:
+          type: integer
       required:
-        - clientId
         - membershipId
-        - membershipName
-        - price
+        - clientId
 
     CheckoutSessionResult:
       type: object
       properties:
         url:
           type: string
+          nullable: true
         sessionId:
           type: string
+          nullable: true
       required:
         - url
         - sessionId
@@ -1093,10 +1394,11 @@ components:
           type: integer
         amount:
           type: number
-        stripeSessionId:
-          type: string
         status:
           type: string
+        stripeSessionId:
+          type: string
+          nullable: true
         createdAt:
           type: string
       required:

@@ -9,6 +9,88 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface LoginBody {
+  email: string;
+  password: string;
+}
+
+export type AuthUserRole = (typeof AuthUserRole)[keyof typeof AuthUserRole];
+
+export const AuthUserRole = {
+  ADMIN: "ADMIN",
+  RECEPTIONIST: "RECEPTIONIST",
+  INSTRUCTOR: "INSTRUCTOR",
+} as const;
+
+export interface AuthUser {
+  id: number;
+  email: string;
+  name: string;
+  role: AuthUserRole;
+  studioId: number;
+  studioName: string;
+}
+
+export interface LoginResponse {
+  token: string;
+  user: AuthUser;
+}
+
+export interface StudioSettings {
+  id: number;
+  name: string;
+  slug: string;
+  logoUrl?: string | null;
+  primaryColor: string;
+  secondaryColor: string;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  cancellationPolicy?: string | null;
+  createdAt: string;
+}
+
+export interface UpdateStudioSettingsBody {
+  name?: string;
+  logoUrl?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  cancellationPolicy?: string;
+}
+
+export interface RevenueItem {
+  month: string;
+  total: number;
+  count: number;
+}
+
+export interface NewClientsItem {
+  month: string;
+  count: number;
+}
+
+export interface CancellationsItem {
+  month: string;
+  cancelled: number;
+  total: number;
+}
+
+export interface OccupancyReportItem {
+  hour: string;
+  reservations: number;
+  capacity: number;
+  occupancyPct: number;
+}
+
+export interface MembershipsReportItem {
+  month: string;
+  count: number;
+  revenue: number;
+}
+
 export type PilatesClassLevel =
   (typeof PilatesClassLevel)[keyof typeof PilatesClassLevel];
 
@@ -178,7 +260,7 @@ export interface MarkAttendanceBody {
 export interface MembershipPlan {
   id: number;
   name: string;
-  description?: string;
+  description?: string | null;
   totalClasses: number;
   price: number;
   durationDays: number;
@@ -191,7 +273,7 @@ export interface CreateMembershipBody {
   totalClasses: number;
   price: number;
   durationDays: number;
-  active?: boolean;
+  active: boolean;
 }
 
 export type ClientMembershipStatus =
@@ -207,25 +289,20 @@ export const ClientMembershipStatus = {
 export interface ClientMembership {
   id: number;
   clientId: number;
+  clientName: string;
   membershipId: number;
   membershipName: string;
-  clientName: string;
-  startDate: string;
-  endDate: string;
   classesUsed: number;
   classesTotal: number;
+  startDate: string;
+  endDate: string;
   status: ClientMembershipStatus;
 }
 
 export interface CreateClientMembershipBody {
   clientId: number;
   membershipId: number;
-  membershipName: string;
-  clientName: string;
   startDate: string;
-  endDate: string;
-  classesTotal: number;
-  status?: string;
 }
 
 export interface DashboardSummary {
@@ -264,15 +341,13 @@ export interface NotificationResult {
 }
 
 export interface CreateCheckoutSessionBody {
-  clientId: number;
   membershipId: number;
-  membershipName: string;
-  price: number;
+  clientId: number;
 }
 
 export interface CheckoutSessionResult {
-  url: string;
-  sessionId: string;
+  url: string | null;
+  sessionId: string | null;
 }
 
 export interface Payment {
@@ -280,8 +355,8 @@ export interface Payment {
   clientId: number;
   membershipId: number;
   amount: number;
-  stripeSessionId?: string;
   status: string;
+  stripeSessionId?: string | null;
   createdAt: string;
 }
 

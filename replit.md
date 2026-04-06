@@ -18,29 +18,65 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui
 - **Routing**: Wouter
 - **State**: TanStack Query
+- **Auth**: JWT (jsonwebtoken + bcryptjs)
 
-## Project: Pilates Studio Manager
+## Artifacts
 
-A management MVP for pilates studios with the following screens:
-- **Login** — split layout with form + pilates image
-- **Dashboard** — stats cards, today's classes, calendar, recent clients
-- **Clases** — full CRUD table with modal for new class creation
-- **Clientes** — client table with side panel (attendance history, notes)
-- **Calendario** — weekly grid view with class blocks and reservation management
-- **Instructores** — instructor list/cards
-- **Membresías** — membership plans CRUD + client membership assignment and status tracking
+1. **pilates-studio** — Main management app (Spanish UI, purple accent)
+2. **api-server** — Express REST API (port 8080)
+3. **landing** — Public SaaS landing page
+
+## Project: Pilates Studio Manager (SaaS — Phase 3)
+
+A production-ready multi-tenant SaaS for pilates studio management with:
+
+### Auth
+- JWT-based login/logout with 7-day expiry
+- 3 roles: ADMIN, RECEPTIONIST, INSTRUCTOR
+- Protected routes (redirect to /login if unauthenticated)
+- Role-based sidebar navigation
+- Demo accounts: admin@studio.com/admin123 | recep@studio.com/recep123 | inst@studio.com/inst123
+
+### Pages
+- **Login** — Split layout with real JWT auth, demo credential hints
+- **Dashboard** — Stats cards + 4 Recharts charts (occupancy, top clients, weekly attendance, popular classes)
+- **Clases** — Full CRUD with modal
+- **Clientes** — Client table with side panel (attendance history, notes)
+- **Calendario** — Weekly grid view with attendance toggles + WhatsApp reminders
+- **Instructores** — Instructor cards
+- **Membresías** — Plans CRUD + Stripe checkout + client membership assignment
+- **Reportes** — 5 charts (revenue, new clients, cancellations, occupancy, memberships) — ADMIN only
+- **Configuración** — Studio settings form + branding color pickers — ADMIN only
+
+### Layout
+- Collapsible sidebar with role-filtered nav items
+- Breadcrumbs in header
+- User avatar with dropdown (role badge, logout)
+- Studio name shown in sidebar from DB
 
 ### Data Model
+- **studios** — name, slug, logoUrl, primaryColor, secondaryColor, phone, email, address, cancellationPolicy
+- **users** — email, name, passwordHash, role (ADMIN/RECEPTIONIST/INSTRUCTOR), studioId
 - **instructors** — name, email, phone, specialties[]
 - **classes** — name, instructorId, time, duration, capacity, enrolled, level, type, status, dayOfWeek, date
 - **clients** — name, phone, email, plan, classesRemaining, notes
 - **reservations** — clientId, classId, date, status, attended (bool)
 - **memberships** — name, description, totalClasses, price, durationDays, active
-- **client_memberships** — clientId, membershipId, membershipName, clientName, startDate, endDate, classesUsed, classesTotal, status
+- **client_memberships** — clientId, membershipId, startDate, endDate, classesUsed, status
+- **payments** — clientId, membershipId, amount, status, stripeSessionId
 
-### Dashboard Charts
-- **Ocupación Semanal** — BarChart via Recharts showing occupancy % by day of week
-- **Top Clientes** — Horizontal BarChart showing clients ranked by classes attended
+### API Routes
+- `POST /api/auth/login` — JWT login
+- `GET /api/auth/me` — current user (requires Bearer token)
+- `GET/PATCH /api/studio/settings` — studio config
+- `GET /api/reports/revenue|new-clients|cancellations|occupancy|memberships`
+- Standard CRUD for classes, clients, instructors, reservations, memberships
+- Stripe webhook + checkout session creation
+- WhatsApp notifications via Twilio
+
+### Landing Page (at /landing)
+- Hero, Features (6 items), Pricing (3 plans), Testimonials, FAQ accordion, CTA section
+- Framer Motion scroll animations, sticky nav, mobile hamburger menu
 
 ## Key Commands
 
@@ -50,5 +86,12 @@ A management MVP for pilates studios with the following screens:
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 - `pnpm --filter @workspace/pilates-studio run dev` — run frontend locally
+
+## Important Notes
+
+- NEVER import `zod/v4` directly in api-server source — use generated schemas from `@workspace/api-zod`
+- Drizzle returns `Date` objects — call `.toISOString()` before Zod parse
+- JWT secret: uses `JWT_SECRET` env var, falls back to `SESSION_SECRET`
+- API client auth token getter set in `AuthContext` via `setAuthTokenGetter`
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

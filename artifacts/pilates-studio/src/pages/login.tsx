@@ -1,17 +1,29 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/contexts/auth";
 import loginBg from "@/assets/login-bg.jpg";
 
 export default function Login() {
   const [, setLocation] = useLocation();
+  const { login, isLoading } = useAuth();
+  const [email, setEmail] = useState("admin@studio.com");
+  const [password, setPassword] = useState("admin123");
+  const [showPw, setShowPw] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLocation("/dashboard");
+    setError("");
+    try {
+      await login(email, password);
+      setLocation("/dashboard");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error al iniciar sesión");
+    }
   };
 
   return (
@@ -30,49 +42,87 @@ export default function Login() {
             <p className="text-muted-foreground text-lg">Inicia sesión para gestionar tu estudio.</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6 mt-12">
+          <form onSubmit={handleLogin} className="space-y-5 mt-10">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium">Correo electrónico</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="admin@estudio.com" 
-                  required 
-                  className="h-12 rounded-xl bg-card border-border/50 shadow-sm focus-visible:ring-primary/20"
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-sm font-medium">Contraseña</Label>
-                  <a href="#" className="text-sm text-primary hover:underline font-medium">
-                    ¿Olvidé mi contraseña?
-                  </a>
-                </div>
-                <Input 
-                  id="password" 
-                  type="password" 
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="admin@studio.com"
                   required
                   className="h-12 rounded-xl bg-card border-border/50 shadow-sm focus-visible:ring-primary/20"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm font-medium">Contraseña</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPw ? "text" : "password"}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    className="h-12 rounded-xl bg-card border-border/50 shadow-sm focus-visible:ring-primary/20 pr-11"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <Button type="submit" className="w-full h-12 rounded-xl text-base font-medium shadow-sm hover:shadow group transition-all">
-              Iniciar sesión
-              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            {error && (
+              <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium">
+                {error}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full h-12 rounded-xl text-base font-medium shadow-sm hover:shadow group transition-all"
+              disabled={isLoading}
+            >
+              {isLoading ? "Iniciando sesión..." : (
+                <>
+                  Iniciar sesión
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </Button>
+
+            <div className="p-4 rounded-xl bg-muted/50 border border-border/50 text-sm text-muted-foreground space-y-1.5">
+              <div className="font-medium text-foreground mb-2">Cuentas demo</div>
+              <div><span className="font-medium text-foreground">admin@studio.com</span> / admin123</div>
+              <div><span className="font-medium text-foreground">recep@studio.com</span> / recep123</div>
+              <div><span className="font-medium text-foreground">inst@studio.com</span> / inst123</div>
+            </div>
           </form>
         </div>
       </div>
 
-      <div className="hidden lg:block lg:flex-1 relative overflow-hidden bg-muted">
-        <div className="absolute inset-0 bg-primary/10 mix-blend-multiply z-10" />
-        <img 
-          src={loginBg} 
-          alt="Pilates studio interior" 
-          className="absolute inset-0 w-full h-full object-cover object-center animate-in fade-in duration-1000"
+      <div className="hidden lg:block lg:flex-1 relative overflow-hidden">
+        <img
+          src={loginBg}
+          alt="Pilates studio interior"
+          className="absolute inset-0 w-full h-full object-cover object-center"
         />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-purple-900/60" />
+        <div className="absolute bottom-16 left-14 right-14 text-white">
+          <p className="text-3xl font-semibold leading-snug">
+            "La plataforma que tu estudio necesita para crecer."
+          </p>
+          <p className="mt-4 text-white/70 text-lg">
+            Gestiona clases, clientes, membresías y pagos en un solo lugar.
+          </p>
+        </div>
       </div>
     </div>
   );

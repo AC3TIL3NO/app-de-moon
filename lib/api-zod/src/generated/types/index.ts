@@ -7,6 +7,9 @@
  */
 
 export * from "./attendanceRecord";
+export * from "./authUser";
+export * from "./authUserRole";
+export * from "./cancellationsItem";
 export * from "./checkoutSessionResult";
 export * from "./client";
 export * from "./clientMembership";
@@ -26,10 +29,15 @@ export * from "./dashboardSummary";
 export * from "./handleStripeWebhook200";
 export * from "./healthStatus";
 export * from "./instructor";
+export * from "./loginBody";
+export * from "./loginResponse";
 export * from "./markAttendanceBody";
 export * from "./membershipPlan";
+export * from "./membershipsReportItem";
+export * from "./newClientsItem";
 export * from "./notificationResult";
 export * from "./occupancyItem";
+export * from "./occupancyReportItem";
 export * from "./payment";
 export * from "./pilatesClass";
 export * from "./pilatesClassLevel";
@@ -38,5 +46,8 @@ export * from "./pilatesClassType";
 export * from "./popularClassItem";
 export * from "./reservation";
 export * from "./reservationStatus";
+export * from "./revenueItem";
+export * from "./studioSettings";
 export * from "./topClientItem";
+export * from "./updateStudioSettingsBody";
 export * from "./weeklyAttendanceItem";

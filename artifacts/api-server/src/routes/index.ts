@@ -8,10 +8,16 @@ import dashboardRouter from "./dashboard";
 import membershipsRouter from "./memberships";
 import notificationsRouter from "./notifications";
 import paymentsRouter from "./payments";
+import authRouter from "./auth";
+import studioRouter from "./studio";
+import reportsRouter from "./reports";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(authRouter);
+router.use(studioRouter);
+router.use(reportsRouter);
 router.use(instructorsRouter);
 router.use(clientsRouter);
 router.use(classesRouter);

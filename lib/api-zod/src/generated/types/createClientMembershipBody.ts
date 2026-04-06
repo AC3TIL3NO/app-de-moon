@@ -9,10 +9,5 @@
 export interface CreateClientMembershipBody {
   clientId: number;
   membershipId: number;
-  membershipName: string;
-  clientName: string;
   startDate: string;
-  endDate: string;
-  classesTotal: number;
-  status?: string;
 }

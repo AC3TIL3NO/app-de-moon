@@ -11,7 +11,7 @@ export interface Payment {
   clientId: number;
   membershipId: number;
   amount: number;
-  stripeSessionId?: string;
   status: string;
+  stripeSessionId?: string | null;
   createdAt: string;
 }

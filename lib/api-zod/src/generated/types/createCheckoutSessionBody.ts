@@ -7,8 +7,6 @@
  */
 
 export interface CreateCheckoutSessionBody {
-  clientId: number;
   membershipId: number;
-  membershipName: string;
-  price: number;
+  clientId: number;
 }

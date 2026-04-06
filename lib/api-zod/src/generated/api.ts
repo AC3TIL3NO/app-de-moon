@@ -15,6 +15,141 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * @summary Login with email and password
+ */
+export const LoginBody = zod.object({
+  email: zod.string(),
+  password: zod.string(),
+});
+
+export const LoginResponse = zod.object({
+  token: zod.string(),
+  user: zod.object({
+    id: zod.number(),
+    email: zod.string(),
+    name: zod.string(),
+    role: zod.enum(["ADMIN", "RECEPTIONIST", "INSTRUCTOR"]),
+    studioId: zod.number(),
+    studioName: zod.string(),
+  }),
+});
+
+/**
+ * @summary Get current authenticated user
+ */
+export const GetMeResponse = zod.object({
+  id: zod.number(),
+  email: zod.string(),
+  name: zod.string(),
+  role: zod.enum(["ADMIN", "RECEPTIONIST", "INSTRUCTOR"]),
+  studioId: zod.number(),
+  studioName: zod.string(),
+});
+
+/**
+ * @summary Get studio settings
+ */
+export const GetStudioSettingsResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  slug: zod.string(),
+  logoUrl: zod.string().nullish(),
+  primaryColor: zod.string(),
+  secondaryColor: zod.string(),
+  phone: zod.string().nullish(),
+  email: zod.string().nullish(),
+  address: zod.string().nullish(),
+  cancellationPolicy: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Update studio settings
+ */
+export const UpdateStudioSettingsBody = zod.object({
+  name: zod.string().optional(),
+  logoUrl: zod.string().optional(),
+  primaryColor: zod.string().optional(),
+  secondaryColor: zod.string().optional(),
+  phone: zod.string().optional(),
+  email: zod.string().optional(),
+  address: zod.string().optional(),
+  cancellationPolicy: zod.string().optional(),
+});
+
+export const UpdateStudioSettingsResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  slug: zod.string(),
+  logoUrl: zod.string().nullish(),
+  primaryColor: zod.string(),
+  secondaryColor: zod.string(),
+  phone: zod.string().nullish(),
+  email: zod.string().nullish(),
+  address: zod.string().nullish(),
+  cancellationPolicy: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Get monthly revenue report
+ */
+export const GetRevenueReportResponseItem = zod.object({
+  month: zod.string(),
+  total: zod.number(),
+  count: zod.number(),
+});
+export const GetRevenueReportResponse = zod.array(GetRevenueReportResponseItem);
+
+/**
+ * @summary Get new clients per month
+ */
+export const GetNewClientsReportResponseItem = zod.object({
+  month: zod.string(),
+  count: zod.number(),
+});
+export const GetNewClientsReportResponse = zod.array(
+  GetNewClientsReportResponseItem,
+);
+
+/**
+ * @summary Get cancellations per month
+ */
+export const GetCancellationsReportResponseItem = zod.object({
+  month: zod.string(),
+  cancelled: zod.number(),
+  total: zod.number(),
+});
+export const GetCancellationsReportResponse = zod.array(
+  GetCancellationsReportResponseItem,
+);
+
+/**
+ * @summary Get occupancy by time slot
+ */
+export const GetOccupancyReportResponseItem = zod.object({
+  hour: zod.string(),
+  reservations: zod.number(),
+  capacity: zod.number(),
+  occupancyPct: zod.number(),
+});
+export const GetOccupancyReportResponse = zod.array(
+  GetOccupancyReportResponseItem,
+);
+
+/**
+ * @summary Get memberships sold per month
+ */
+export const GetMembershipsReportResponseItem = zod.object({
+  month: zod.string(),
+  count: zod.number(),
+  revenue: zod.number(),
+});
+export const GetMembershipsReportResponse = zod.array(
+  GetMembershipsReportResponseItem,
+);
+
+/**
  * @summary List all classes
  */
 export const ListClassesResponseItem = zod.object({
@@ -292,7 +427,7 @@ export const MarkAttendanceResponse = zod.object({
 export const ListMembershipsResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
-  description: zod.string().optional(),
+  description: zod.string().nullish(),
   totalClasses: zod.number(),
   price: zod.number(),
   durationDays: zod.number(),
@@ -309,7 +444,7 @@ export const CreateMembershipBody = zod.object({
   totalClasses: zod.number(),
   price: zod.number(),
   durationDays: zod.number(),
-  active: zod.boolean().optional(),
+  active: zod.boolean(),
 });
 
 /**
@@ -325,13 +460,13 @@ export const DeleteMembershipParams = zod.object({
 export const ListClientMembershipsResponseItem = zod.object({
   id: zod.number(),
   clientId: zod.number(),
+  clientName: zod.string(),
   membershipId: zod.number(),
   membershipName: zod.string(),
-  clientName: zod.string(),
-  startDate: zod.string(),
-  endDate: zod.string(),
   classesUsed: zod.number(),
   classesTotal: zod.number(),
+  startDate: zod.string(),
+  endDate: zod.string(),
   status: zod.enum(["Activa", "Vencida", "Agotada", "Cancelada"]),
 });
 export const ListClientMembershipsResponse = zod.array(
@@ -344,12 +479,7 @@ export const ListClientMembershipsResponse = zod.array(
 export const CreateClientMembershipBody = zod.object({
   clientId: zod.number(),
   membershipId: zod.number(),
-  membershipName: zod.string(),
-  clientName: zod.string(),
   startDate: zod.string(),
-  endDate: zod.string(),
-  classesTotal: zod.number(),
-  status: zod.string().optional(),
 });
 
 /**
@@ -467,15 +597,13 @@ export const SendTestNotificationResponse = zod.object({
  * @summary Create a Stripe Checkout session for a membership
  */
 export const CreateCheckoutSessionBody = zod.object({
-  clientId: zod.number(),
   membershipId: zod.number(),
-  membershipName: zod.string(),
-  price: zod.number(),
+  clientId: zod.number(),
 });
 
 export const CreateCheckoutSessionResponse = zod.object({
-  url: zod.string(),
-  sessionId: zod.string(),
+  url: zod.string().nullable(),
+  sessionId: zod.string().nullable(),
 });
 
 /**
@@ -493,8 +621,8 @@ export const ListPaymentsResponseItem = zod.object({
   clientId: zod.number(),
   membershipId: zod.number(),
   amount: zod.number(),
-  stripeSessionId: zod.string().optional(),
   status: zod.string(),
+  stripeSessionId: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const ListPaymentsResponse = zod.array(ListPaymentsResponseItem);

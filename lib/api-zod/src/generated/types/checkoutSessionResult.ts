@@ -7,6 +7,6 @@
  */
 
 export interface CheckoutSessionResult {
-  url: string;
-  sessionId: string;
+  url: string | null;
+  sessionId: string | null;
 }

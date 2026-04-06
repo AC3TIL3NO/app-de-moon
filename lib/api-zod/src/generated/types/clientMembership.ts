@@ -10,12 +10,12 @@ import type { ClientMembershipStatus } from "./clientMembershipStatus";
 export interface ClientMembership {
   id: number;
   clientId: number;
+  clientName: string;
   membershipId: number;
   membershipName: string;
-  clientName: string;
-  startDate: string;
-  endDate: string;
   classesUsed: number;
   classesTotal: number;
+  startDate: string;
+  endDate: string;
   status: ClientMembershipStatus;
 }
