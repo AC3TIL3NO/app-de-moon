@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { db } from "@workspace/db";
-import { clientsTable, reservationsTable, classesTable, clientMembershipsTable } from "@workspace/db";
+import { clientsTable, reservationsTable, classesTable, clientMembershipsTable, instructorsTable } from "@workspace/db";
 import { eq, and, gte, desc } from "drizzle-orm";
 import { verifyToken } from "../lib/auth";
 import { Request, Response, NextFunction } from "express";
@@ -111,10 +111,12 @@ router.get("/client/reservations", requireClientAuth, async (req, res): Promise<
       time: classesTable.time,
       status: reservationsTable.status,
       attended: reservationsTable.attended,
-      instructor: classesTable.instructor,
+      instructorId: classesTable.instructorId,
+      instructorName: instructorsTable.name,
     })
     .from(reservationsTable)
     .leftJoin(classesTable, eq(reservationsTable.classId, classesTable.id))
+    .leftJoin(instructorsTable, eq(classesTable.instructorId, instructorsTable.id))
     .where(eq(reservationsTable.clientId, clientId))
     .orderBy(desc(reservationsTable.createdAt))
     .limit(50);

@@ -13,6 +13,7 @@ import Instructors from "@/pages/instructors";
 import Memberships from "@/pages/memberships";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
+import Payments from "@/pages/payments";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ function Router() {
               <Route path="/calendar" component={Calendar} />
               <Route path="/instructors" component={Instructors} />
               <Route path="/memberships" component={Memberships} />
+              <Route path="/payments" component={Payments} />
               <Route path="/reports" component={Reports} />
               <Route path="/settings" component={Settings} />
               <Route>

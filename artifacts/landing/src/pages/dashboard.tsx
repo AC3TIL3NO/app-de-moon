@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import {
-  Calendar, CreditCard, User, History,
+  Calendar, CreditCard, User, History, Receipt,
   LogOut, ChevronRight, Clock, CheckCircle2,
-  XCircle, AlertCircle, Menu, X, Zap, Star
+  XCircle, AlertCircle, Menu, X, Zap, Star, DollarSign
 } from "lucide-react";
 import { useClientAuth, getClientAuthHeaders, API_BASE } from "@/contexts/clientAuth";
 import { BookingModal } from "@/components/BookingModal";
@@ -13,9 +13,21 @@ import { AuthModal } from "@/components/AuthModal";
 const NAV_ITEMS = [
   { id: "reservas", icon: Calendar, label: "Mis Reservas" },
   { id: "membresia", icon: CreditCard, label: "Membresía" },
+  { id: "pagos", icon: Receipt, label: "Pagos" },
   { id: "perfil", icon: User, label: "Perfil" },
   { id: "historial", icon: History, label: "Historial" },
 ];
+
+interface Payment {
+  id: number;
+  concept: string;
+  amount: number;
+  paymentMethod: string;
+  cardBrand?: string;
+  cardLast4?: string;
+  status: string;
+  createdAt: string;
+}
 
 interface Reservation {
   id: number;
@@ -55,6 +67,8 @@ export default function ClientDashboard() {
   const [authOpen, setAuthOpen] = useState(false);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
 
   useEffect(() => {
     if (!token) { navigate("/"); }
@@ -70,6 +84,14 @@ export default function ClientDashboard() {
         .then(r => r.json()).then(setMembership).catch(() => setMembership(null)),
     ]).finally(() => setLoadingRes(false));
   }, [token]);
+
+  useEffect(() => {
+    if (!token || section !== "pagos") return;
+    setLoadingPayments(true);
+    fetch(`${API_BASE}/client/payments`, { headers: getClientAuthHeaders() })
+      .then(r => r.json()).then(setPayments).catch(() => setPayments([]))
+      .finally(() => setLoadingPayments(false));
+  }, [token, section]);
 
   const showToast = (msg: string, type: "success" | "error" = "success") => {
     setToast({ msg, type });
@@ -367,6 +389,57 @@ export default function ClientDashboard() {
                 className="w-full h-11 rounded-xl border border-red-100 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors flex items-center justify-center gap-2">
                 <LogOut className="h-4 w-4" /> Cerrar sesión
               </button>
+            </div>
+          )}
+
+          {/* Pagos */}
+          {section === "pagos" && (
+            <div className="max-w-3xl space-y-5">
+              <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-50 flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-violet-500" />
+                  <span className="font-semibold text-gray-900 text-sm">Historial de pagos</span>
+                </div>
+                {loadingPayments ? (
+                  <div className="space-y-3 p-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-14 bg-gray-50 rounded-xl animate-pulse" />)}</div>
+                ) : payments.length === 0 ? (
+                  <div className="text-center py-16">
+                    <DollarSign className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+                    <p className="text-sm text-gray-400">No tienes pagos registrados todavía</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-50">
+                    {payments.map(p => (
+                      <div key={p.id} className="flex items-center gap-4 px-5 py-4">
+                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${p.status === "paid" ? "bg-emerald-100" : "bg-amber-100"}`}>
+                          {p.status === "paid"
+                            ? <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                            : <Clock className="h-5 w-5 text-amber-600" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-gray-900">{p.concept}</div>
+                          <div className="text-xs text-gray-400 mt-0.5">
+                            {p.cardBrand && p.cardLast4
+                              ? `${p.cardBrand.charAt(0).toUpperCase() + p.cardBrand.slice(1)} •••• ${p.cardLast4}`
+                              : p.paymentMethod}
+                            {" · "}
+                            {new Date(p.createdAt).toLocaleDateString("es-PA", { day: "2-digit", month: "short", year: "numeric" })}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-gray-900">${p.amount.toFixed(2)}</div>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                            {p.status === "paid" ? "Pagado" : "Pendiente"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 text-center px-4">
+                Los pagos en línea son procesados de forma segura por Stripe. Para comprobantes o recibos, escríbenos a moonpilatesstudiopty@gmail.com.
+              </p>
             </div>
           )}
 

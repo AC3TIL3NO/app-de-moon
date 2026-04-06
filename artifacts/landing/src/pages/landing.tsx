@@ -129,6 +129,7 @@ const MEMBERSHIPS = [
     name: "Moon Start",
     subtitle: "8 clases al mes",
     price: "B/.120",
+    numericPrice: 120,
     ideal: "Ideal para 2 clases por semana",
     features: ["8 clases mensuales", "Acceso a clases grupales", "Soporte por WhatsApp", "Seguimiento básico"],
     highlight: false,
@@ -138,6 +139,7 @@ const MEMBERSHIPS = [
     name: "Moon Flow",
     subtitle: "12 clases al mes",
     price: "B/.160",
+    numericPrice: 160,
     ideal: "Ideal para progreso constante",
     features: ["12 clases mensuales", "Prioridad de reserva", "Seguimiento personalizado", "Acceso a privadas y grupales", "WhatsApp directo"],
     highlight: true,
@@ -147,6 +149,7 @@ const MEMBERSHIPS = [
     name: "Moon Unlimited",
     subtitle: "Clases ilimitadas",
     price: "B/.220",
+    numericPrice: 220,
     ideal: "Incluye prioridad de reserva",
     features: ["Clases ilimitadas", "Reserva prioritaria", "Privadas y grupales", "Atención personalizada", "WhatsApp VIP", "Plan nutricional"],
     highlight: false,
@@ -163,6 +166,30 @@ const BENEFITS = [
   { icon: Heart, title: "Comunidad Moon", desc: "Forma parte de una comunidad que se apoya y crece junta." },
 ];
 
+const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "").replace("/landing", "") + "/api";
+
+function CardIcons({ dark = false }: { dark?: boolean }) {
+  const opacity = dark ? "opacity-60" : "opacity-50";
+  return (
+    <div className={`flex items-center justify-center gap-2 mt-3 ${opacity}`}>
+      <svg viewBox="0 0 50 32" className="h-5 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="50" height="32" rx="4" fill={dark ? "#374151" : "#f3f4f6"}/>
+        <text x="25" y="21" textAnchor="middle" fontSize="9" fontWeight="bold" fill={dark ? "#60a5fa" : "#1d4ed8"}>VISA</text>
+      </svg>
+      <svg viewBox="0 0 50 32" className="h-5 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="50" height="32" rx="4" fill={dark ? "#374151" : "#f3f4f6"}/>
+        <circle cx="20" cy="16" r="9" fill="#eb001b" opacity="0.9"/>
+        <circle cx="30" cy="16" r="9" fill="#f79e1b" opacity="0.9"/>
+        <path d="M25 9.4a9 9 0 0 1 0 13.2A9 9 0 0 1 25 9.4z" fill="#ff5f00"/>
+      </svg>
+      <svg viewBox="0 0 50 32" className="h-5 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="50" height="32" rx="4" fill={dark ? "#374151" : "#f3f4f6"}/>
+        <text x="25" y="21" textAnchor="middle" fontSize="7.5" fontWeight="bold" fill={dark ? "#9ca3af" : "#374151"}>AMEX</text>
+      </svg>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -170,6 +197,8 @@ export default function LandingPage() {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [preselectedClass, setPreselectedClass] = useState<{ name: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [pendingPlan, setPendingPlan] = useState<typeof MEMBERSHIPS[0] | null>(null);
   const { client } = useClientAuth();
   const [, navigate] = useLocation();
 
@@ -179,6 +208,17 @@ export default function LandingPage() {
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment") === "success") {
+      showToast("Pago procesado con exito. Tu membresia fue activada.");
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (params.get("payment") === "cancelled") {
+      showToast("Pago cancelado. Puedes intentarlo de nuevo cuando quieras.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
     setMobileOpen(false);
@@ -186,7 +226,7 @@ export default function LandingPage() {
 
   const showToast = (msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), 4000);
   };
 
   const handleReservar = (className?: string) => {
@@ -195,6 +235,40 @@ export default function LandingPage() {
       setBookingOpen(true);
     } else {
       setAuthOpen(true);
+    }
+  };
+
+  const handleComprarPaquete = async (plan: typeof MEMBERSHIPS[0]) => {
+    if (!client) {
+      setPendingPlan(plan);
+      setAuthOpen(true);
+      return;
+    }
+    setCheckoutLoading(plan.name);
+    try {
+      const token = localStorage.getItem("moon_client_token") ?? "";
+      const res = await fetch(`${API_BASE}/payments/create-checkout-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          clientId: client.id,
+          concept: "Membresía",
+          membershipName: plan.name,
+          price: plan.numericPrice,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.error ?? "Error al iniciar el pago. Intenta de nuevo.");
+        return;
+      }
+      const { url } = await res.json();
+      if (url) window.location.href = url;
+      else showToast("Error: no se recibio URL de pago");
+    } catch {
+      showToast("Error de conexion. Intenta de nuevo.");
+    } finally {
+      setCheckoutLoading(null);
     }
   };
 
@@ -708,15 +782,25 @@ export default function LandingPage() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => handleReservar()}
-                  className={`w-full py-3.5 rounded-2xl font-semibold text-sm transition-all ${
+                  onClick={() => handleComprarPaquete(plan)}
+                  disabled={checkoutLoading === plan.name}
+                  className={`w-full py-3.5 rounded-2xl font-semibold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-70 ${
                     plan.highlight
                       ? "bg-violet-600 text-white hover:bg-violet-500 shadow-lg shadow-violet-900/20"
                       : "bg-gray-900 text-white hover:bg-violet-600"
                   }`}
                 >
-                  {plan.cta}
+                  {checkoutLoading === plan.name ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/>
+                      </svg>
+                      Cargando...
+                    </>
+                  ) : plan.cta}
                 </motion.button>
+                <CardIcons dark={plan.highlight} />
               </motion.div>
             ))}
           </div>
@@ -975,10 +1059,16 @@ export default function LandingPage() {
       {/* Auth Modal */}
       <AuthModal
         isOpen={authOpen}
-        onClose={() => setAuthOpen(false)}
+        onClose={() => { setAuthOpen(false); setPendingPlan(null); }}
         onSuccess={() => {
           setAuthOpen(false);
-          setBookingOpen(true);
+          if (pendingPlan) {
+            const plan = pendingPlan;
+            setPendingPlan(null);
+            setTimeout(() => handleComprarPaquete(plan), 100);
+          } else {
+            setBookingOpen(true);
+          }
         }}
       />
 

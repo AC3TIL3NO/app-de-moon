@@ -23,6 +23,7 @@ import {
   BarChart3,
   Settings,
   ChevronRight,
+  Receipt,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -47,6 +48,7 @@ const ALL_NAV = [
   { name: "Calendario", href: "/calendar", icon: CalendarDays, roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] },
   { name: "Instructores", href: "/instructors", icon: UserSquare2, roles: ["ADMIN"] },
   { name: "Membresías", href: "/memberships", icon: CreditCard, roles: ["ADMIN", "RECEPTIONIST"] },
+  { name: "Caja / Pagos", href: "/payments", icon: Receipt, roles: ["ADMIN", "RECEPTIONIST"] },
   { name: "Reportes", href: "/reports", icon: BarChart3, roles: ["ADMIN"] },
   { name: "Configuración", href: "/settings", icon: Settings, roles: ["ADMIN"] },
 ];
