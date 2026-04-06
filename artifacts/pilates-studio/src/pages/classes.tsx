@@ -1,24 +1,19 @@
 import { useState } from "react";
-import { 
-  useListClasses, 
-  useCreateClass, 
-  useDeleteClass, 
+import {
+  useListClasses,
+  useCreateClass,
+  useDeleteClass,
   useListInstructors,
-  getListClassesQueryKey
+  getListClassesQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -26,71 +21,134 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, Plus, Edit2, Trash2, Clock, User, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CreateClassBodyLevel, CreateClassBodyType } from "@workspace/api-client-react";
+
+const LEVEL_CONFIG = {
+  Principiante: {
+    bg: "bg-green-50",
+    headerBorder: "border-b-green-500",
+    badgeBg: "bg-green-100",
+    badgeText: "text-green-700",
+    cardBorder: "border-l-green-500",
+    progressColor: "bg-green-500",
+    dot: "bg-green-200",
+  },
+  Intermedio: {
+    bg: "bg-amber-50",
+    headerBorder: "border-b-amber-500",
+    badgeBg: "bg-amber-100",
+    badgeText: "text-amber-700",
+    cardBorder: "border-l-amber-500",
+    progressColor: "bg-amber-500",
+    dot: "bg-amber-200",
+  },
+  Avanzado: {
+    bg: "bg-purple-50",
+    headerBorder: "border-b-purple-500",
+    badgeBg: "bg-purple-100",
+    badgeText: "text-purple-700",
+    cardBorder: "border-l-purple-500",
+    progressColor: "bg-purple-500",
+    dot: "bg-purple-200",
+  },
+} as const;
+
+type Level = keyof typeof LEVEL_CONFIG;
+const LEVELS: Level[] = ["Principiante", "Intermedio", "Avanzado"];
 
 export default function Classes() {
   const { data: classes, isLoading } = useListClasses();
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  
-  const filteredClasses = classes?.filter(c => 
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.instructor.toLowerCase().includes(searchTerm.toLowerCase())
+
+  const filtered = (classes ?? []).filter(
+    (c) =>
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.instructor.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const byLevel = Object.fromEntries(
+    LEVELS.map((level) => [level, filtered.filter((c) => c.level === level)])
+  ) as Record<Level, typeof filtered>;
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="h-full flex flex-col animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">Clases</h1>
-          <p className="text-muted-foreground mt-2">Gestiona las clases y horarios del estudio.</p>
+          <p className="text-muted-foreground mt-1 text-sm">Organización por nivel de habilidad</p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} className="rounded-xl shadow-sm">
-          <Plus className="mr-2 h-4 w-4" />
-          Nueva Clase
-        </Button>
-      </div>
-
-      <Card className="shadow-sm border-border/50">
-        <div className="p-4 border-b border-border/50 flex items-center gap-4 bg-muted/20">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar por nombre o instructor..." 
-              className="pl-9 bg-card border-border/50 h-10 rounded-lg"
+            <Input
+              placeholder="Buscar clase o instructor..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 rounded-xl bg-card"
             />
           </div>
+          <Button onClick={() => setIsCreateOpen(true)} className="rounded-xl shadow-sm whitespace-nowrap">
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva Clase
+          </Button>
         </div>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="p-4 space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+      </div>
+
+      {isLoading ? (
+        <div className="flex gap-6">
+          {LEVELS.map((level) => (
+            <div key={level} className="flex-1 min-w-[280px] space-y-3">
+              <Skeleton className="h-16 w-full rounded-xl" />
+              <Skeleton className="h-48 w-full rounded-xl" />
+              <Skeleton className="h-48 w-full rounded-xl" />
             </div>
-          ) : filteredClasses?.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              No se encontraron clases.
-            </div>
-          ) : (
-            <div className="divide-y divide-border/50">
-              {filteredClasses?.map((cls) => (
-                <ClassRow key={cls.id} cls={cls} />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="flex gap-5 overflow-x-auto pb-4 flex-1">
+          {LEVELS.map((level) => {
+            const cfg = LEVEL_CONFIG[level];
+            const cols = byLevel[level];
+            return (
+              <div key={level} className="flex-1 min-w-[300px] flex flex-col">
+                <div className={`bg-card rounded-t-xl border-b-4 shadow-sm mb-4 ${cfg.headerBorder}`}>
+                  <div className={`h-1.5 w-full rounded-t-xl ${cfg.bg}`} />
+                  <div className="px-4 py-3 flex justify-between items-center">
+                    <h2 className="font-semibold text-foreground">{level}</h2>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cfg.badgeBg} ${cfg.badgeText}`}>
+                      {cols.length} {cols.length === 1 ? "clase" : "clases"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  {cols.length === 0 ? (
+                    <div className="bg-muted/30 border border-dashed border-border rounded-xl p-8 text-center text-sm text-muted-foreground h-32 flex items-center justify-center">
+                      Sin clases en este nivel
+                    </div>
+                  ) : (
+                    cols.map((cls) => (
+                      <ClassCard key={cls.id} cls={cls} level={level} cfg={cfg} />
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <CreateClassDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
     </div>
   );
 }
 
-function ClassRow({ cls }: { cls: PilatesClass }) {
+type Cfg = (typeof LEVEL_CONFIG)[Level];
+
+function ClassCard({ cls, cfg }: { cls: { id: number; name: string; instructor: string; time: string; duration: number; type: string; level: string; enrolled: number; capacity: number; status: string }; level: Level; cfg: Cfg }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const deleteMutation = useDeleteClass();
@@ -104,62 +162,81 @@ function ClassRow({ cls }: { cls: PilatesClass }) {
         },
         onError: () => {
           toast({ title: "Error", description: "No se pudo eliminar", variant: "destructive" });
-        }
+        },
       });
     }
   };
 
+  const fillPct = cls.capacity > 0 ? Math.round((cls.enrolled / cls.capacity) * 100) : 0;
+  const isActive = cls.status === "Activa";
+
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-6 hover:bg-accent/50 transition-colors gap-4">
-      <div className="flex items-center gap-4 sm:gap-6 min-w-0">
-        <div className="w-16 shrink-0 text-center sm:text-left">
-          <div className="text-base font-medium">{cls.time}</div>
-          <div className="text-sm text-muted-foreground">{cls.duration} min</div>
-        </div>
-        
-        <div className="hidden sm:block h-12 w-[1px] bg-border/50" />
-        
-        <div className="min-w-0 flex-1">
-          <div className="font-medium text-base truncate">{cls.name}</div>
-          <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-2 mt-1">
-            <span>{cls.instructor}</span>
-            <span className="hidden sm:inline">•</span>
-            <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-medium">{cls.type}</span>
-            <span className="bg-secondary/20 text-secondary-foreground px-2 py-0.5 rounded-full text-xs font-medium">{cls.level}</span>
+    <div className={`bg-card rounded-xl shadow-sm border border-border border-l-4 ${cfg.cardBorder} p-4 hover:shadow-md transition-shadow group`}>
+      <div className="flex justify-between items-start mb-3">
+        <div className="min-w-0">
+          <h3 className="font-semibold text-foreground truncate">{cls.name}</h3>
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-0.5">
+            <User className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{cls.instructor}</span>
           </div>
+        </div>
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2">
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+            <Edit2 className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+            onClick={handleDelete}
+            disabled={deleteMutation.isPending}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
 
-      <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0 border-t sm:border-0 border-border/50 pt-4 sm:pt-0">
-        <div className="text-right">
-          <div className="text-sm font-medium">{cls.enrolled} / {cls.capacity}</div>
-          <div className="text-xs text-muted-foreground">Inscritos</div>
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        <div className="bg-muted/40 rounded-lg p-2 flex items-center gap-2">
+          <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+          <div>
+            <div className="text-xs font-medium text-foreground">{cls.time}</div>
+            <div className="text-[10px] text-muted-foreground">{cls.duration} min</div>
+          </div>
         </div>
-        
-        <Badge variant="secondary" className={`
-          w-24 justify-center
-          ${cls.status === 'Activa' ? 'bg-primary/10 text-primary hover:bg-primary/20' : ''}
-          ${cls.status === 'Completa' ? 'bg-orange-500/10 text-orange-600 hover:bg-orange-500/20' : ''}
-          ${cls.status === 'Cancelada' ? 'bg-destructive/10 text-destructive hover:bg-destructive/20' : ''}
-        `}>
-          {cls.status}
-        </Badge>
+        <div className="bg-muted/40 rounded-lg p-2 flex items-center gap-2">
+          <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold text-foreground ${cfg.bg}`}>
+            {cls.type.substring(0, 1)}
+          </div>
+          <div className="text-xs font-medium text-foreground truncate">{cls.type}</div>
+        </div>
+      </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40 rounded-xl">
-            <DropdownMenuItem className="cursor-pointer">
-              <Pencil className="mr-2 h-4 w-4" /> Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive cursor-pointer">
-              <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <div className="pt-3 border-t border-border/50">
+        <div className="flex justify-between items-center mb-1.5">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Users className="h-3.5 w-3.5" />
+            <span className="font-medium text-foreground">{cls.enrolled} / {cls.capacity}</span>
+            <span>inscritos</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="relative flex h-2 w-2">
+              {isActive && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              )}
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${isActive ? "bg-emerald-500" : "bg-muted-foreground"}`} />
+            </span>
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+              {cls.status}
+            </span>
+          </div>
+        </div>
+        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${cfg.progressColor}`}
+            style={{ width: `${fillPct}%` }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -180,7 +257,7 @@ function CreateClassDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     level: CreateClassBodyLevel.Principiante,
     type: CreateClassBodyType.Reformer,
     dayOfWeek: "Lunes",
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split("T")[0],
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -189,24 +266,37 @@ function CreateClassDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       toast({ title: "Error", description: "Selecciona un instructor", variant: "destructive" });
       return;
     }
-
-    createMutation.mutate({
-      data: {
-        ...formData,
-        instructorId: parseInt(formData.instructorId),
-        duration: parseInt(formData.duration),
-        capacity: parseInt(formData.capacity)
-      }
-    }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListClassesQueryKey() });
-        toast({ title: "Clase creada exitosamente" });
-        onOpenChange(false);
+    createMutation.mutate(
+      {
+        data: {
+          ...formData,
+          instructorId: parseInt(formData.instructorId),
+          duration: parseInt(formData.duration),
+          capacity: parseInt(formData.capacity),
+        },
       },
-      onError: () => {
-        toast({ title: "Error", description: "No se pudo crear la clase", variant: "destructive" });
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListClassesQueryKey() });
+          toast({ title: "Clase creada exitosamente" });
+          onOpenChange(false);
+          setFormData({
+            name: "",
+            instructorId: "",
+            time: "",
+            duration: "60",
+            capacity: "10",
+            level: CreateClassBodyLevel.Principiante,
+            type: CreateClassBodyType.Reformer,
+            dayOfWeek: "Lunes",
+            date: new Date().toISOString().split("T")[0],
+          });
+        },
+        onError: () => {
+          toast({ title: "Error", description: "No se pudo crear la clase", variant: "destructive" });
+        },
       }
-    });
+    );
   };
 
   return (
@@ -219,25 +309,25 @@ function CreateClassDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nombre de la clase</Label>
-              <Input 
-                id="name" 
-                required 
+              <Input
+                id="name"
+                required
                 value={formData.name}
-                onChange={e => setFormData({...formData, name: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ej: Reformer Básico"
                 className="rounded-lg"
               />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Instructor</Label>
-                <Select value={formData.instructorId} onValueChange={v => setFormData({...formData, instructorId: v})}>
+                <Select value={formData.instructorId} onValueChange={(v) => setFormData({ ...formData, instructorId: v })}>
                   <SelectTrigger className="rounded-lg">
                     <SelectValue placeholder="Seleccionar" />
                   </SelectTrigger>
                   <SelectContent>
-                    {instructors?.map(inst => (
+                    {instructors?.map((inst) => (
                       <SelectItem key={inst.id} value={inst.id.toString()}>{inst.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -245,12 +335,12 @@ function CreateClassDialog({ open, onOpenChange }: { open: boolean; onOpenChange
               </div>
               <div className="space-y-2">
                 <Label htmlFor="date">Fecha</Label>
-                <Input 
-                  id="date" 
-                  type="date" 
-                  required 
+                <Input
+                  id="date"
+                  type="date"
+                  required
                   value={formData.date}
-                  onChange={e => setFormData({...formData, date: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                   className="rounded-lg"
                 />
               </div>
@@ -259,24 +349,24 @@ function CreateClassDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="time">Hora</Label>
-                <Input 
-                  id="time" 
-                  type="time" 
-                  required 
+                <Input
+                  id="time"
+                  type="time"
+                  required
                   value={formData.time}
-                  onChange={e => setFormData({...formData, time: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, time: e.target.value })}
                   className="rounded-lg"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="duration">Duración (min)</Label>
-                <Input 
-                  id="duration" 
-                  type="number" 
-                  required 
+                <Input
+                  id="duration"
+                  type="number"
+                  required
                   min="15"
                   value={formData.duration}
-                  onChange={e => setFormData({...formData, duration: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                   className="rounded-lg"
                 />
               </div>
@@ -285,24 +375,24 @@ function CreateClassDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="capacity">Cupos</Label>
-                <Input 
-                  id="capacity" 
-                  type="number" 
-                  required 
+                <Input
+                  id="capacity"
+                  type="number"
+                  required
                   min="1"
                   value={formData.capacity}
-                  onChange={e => setFormData({...formData, capacity: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
                   className="rounded-lg"
                 />
               </div>
               <div className="space-y-2">
                 <Label>Nivel</Label>
-                <Select value={formData.level} onValueChange={v => setFormData({...formData, level: v as CreateClassBodyLevel})}>
+                <Select value={formData.level} onValueChange={(v) => setFormData({ ...formData, level: v as CreateClassBodyLevel })}>
                   <SelectTrigger className="rounded-lg">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.values(CreateClassBodyLevel).map(v => (
+                    {Object.values(CreateClassBodyLevel).map((v) => (
                       <SelectItem key={v} value={v}>{v}</SelectItem>
                     ))}
                   </SelectContent>
@@ -310,12 +400,12 @@ function CreateClassDialog({ open, onOpenChange }: { open: boolean; onOpenChange
               </div>
               <div className="space-y-2">
                 <Label>Tipo</Label>
-                <Select value={formData.type} onValueChange={v => setFormData({...formData, type: v as CreateClassBodyType})}>
+                <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v as CreateClassBodyType })}>
                   <SelectTrigger className="rounded-lg">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.values(CreateClassBodyType).map(v => (
+                    {Object.values(CreateClassBodyType).map((v) => (
                       <SelectItem key={v} value={v}>{v}</SelectItem>
                     ))}
                   </SelectContent>
