@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "vdb2gBKRVkqQ1Fr6Bremo"
+uri = "file://artifacts/pilates-studio/src/assets/login-bg.jpg"
+type = "image"
+title = "soft beautiful modern pilates studio interior natural light"

@@ -3,20 +3,30 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Pilates Studio Management API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: classes
+    description: Pilates class operations
+  - name: clients
+    description: Client operations
+  - name: instructors
+    description: Instructor operations
+  - name: reservations
+    description: Reservation operations
+  - name: dashboard
+    description: Dashboard summary operations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +34,324 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /classes:
+    get:
+      operationId: listClasses
+      tags: [classes]
+      summary: List all classes
+      responses:
+        "200":
+          description: List of classes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PilatesClass"
+    post:
+      operationId: createClass
+      tags: [classes]
+      summary: Create a new class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClassBody"
+      responses:
+        "201":
+          description: Created class
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PilatesClass"
+
+  /classes/{id}:
+    get:
+      operationId: getClass
+      tags: [classes]
+      summary: Get a class by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Class details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PilatesClass"
+    put:
+      operationId: updateClass
+      tags: [classes]
+      summary: Update a class
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClassBody"
+      responses:
+        "200":
+          description: Updated class
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PilatesClass"
+    delete:
+      operationId: deleteClass
+      tags: [classes]
+      summary: Delete a class
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /clients:
+    get:
+      operationId: listClients
+      tags: [clients]
+      summary: List all clients
+      responses:
+        "200":
+          description: List of clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Client"
+    post:
+      operationId: createClient
+      tags: [clients]
+      summary: Create a new client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClientBody"
+      responses:
+        "201":
+          description: Created client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+
+  /clients/{id}:
+    get:
+      operationId: getClient
+      tags: [clients]
+      summary: Get a client by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Client details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+    put:
+      operationId: updateClient
+      tags: [clients]
+      summary: Update a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClientBody"
+      responses:
+        "200":
+          description: Updated client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+    delete:
+      operationId: deleteClient
+      tags: [clients]
+      summary: Delete a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /clients/{id}/attendance:
+    get:
+      operationId: getClientAttendance
+      tags: [clients]
+      summary: Get attendance history for a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Attendance records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttendanceRecord"
+
+  /instructors:
+    get:
+      operationId: listInstructors
+      tags: [instructors]
+      summary: List all instructors
+      responses:
+        "200":
+          description: List of instructors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Instructor"
+    post:
+      operationId: createInstructor
+      tags: [instructors]
+      summary: Create a new instructor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInstructorBody"
+      responses:
+        "201":
+          description: Created instructor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Instructor"
+
+  /reservations:
+    get:
+      operationId: listReservations
+      tags: [reservations]
+      summary: List all reservations
+      responses:
+        "200":
+          description: List of reservations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reservation"
+    post:
+      operationId: createReservation
+      tags: [reservations]
+      summary: Create a new reservation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReservationBody"
+      responses:
+        "201":
+          description: Created reservation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reservation"
+
+  /reservations/{id}:
+    delete:
+      operationId: cancelReservation
+      tags: [reservations]
+      summary: Cancel a reservation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Cancelled
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/today-classes:
+    get:
+      operationId: getTodayClasses
+      tags: [dashboard]
+      summary: Get today's classes
+      responses:
+        "200":
+          description: Today's classes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PilatesClass"
+
+  /dashboard/recent-clients:
+    get:
+      operationId: getRecentClients
+      tags: [dashboard]
+      summary: Get recently registered clients
+      responses:
+        "200":
+          description: Recent clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Client"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +362,255 @@ components:
       required:
         - status
 
+    PilatesClass:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        instructor:
+          type: string
+        instructorId:
+          type: integer
+        time:
+          type: string
+        duration:
+          type: integer
+          description: Duration in minutes
+        capacity:
+          type: integer
+        enrolled:
+          type: integer
+        level:
+          type: string
+          enum: [Principiante, Intermedio, Avanzado]
+        type:
+          type: string
+          enum: [Reformer, Mat, Privada]
+        status:
+          type: string
+          enum: [Activa, Cancelada, Completa]
+        dayOfWeek:
+          type: string
+        date:
+          type: string
+      required:
+        - id
+        - name
+        - instructor
+        - instructorId
+        - time
+        - duration
+        - capacity
+        - enrolled
+        - level
+        - type
+        - status
+        - dayOfWeek
+        - date
+
+    CreateClassBody:
+      type: object
+      properties:
+        name:
+          type: string
+        instructorId:
+          type: integer
+        time:
+          type: string
+        duration:
+          type: integer
+        capacity:
+          type: integer
+        level:
+          type: string
+          enum: [Principiante, Intermedio, Avanzado]
+        type:
+          type: string
+          enum: [Reformer, Mat, Privada]
+        dayOfWeek:
+          type: string
+        date:
+          type: string
+      required:
+        - name
+        - instructorId
+        - time
+        - duration
+        - capacity
+        - level
+        - type
+        - dayOfWeek
+        - date
+
+    Client:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        plan:
+          type: string
+          enum: [Mensual, Trimestral, Anual, Por Clase]
+        classesRemaining:
+          type: integer
+        notes:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - phone
+        - email
+        - plan
+        - classesRemaining
+        - createdAt
+
+    CreateClientBody:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        plan:
+          type: string
+          enum: [Mensual, Trimestral, Anual, Por Clase]
+        classesRemaining:
+          type: integer
+        notes:
+          type: string
+      required:
+        - name
+        - phone
+        - email
+        - plan
+        - classesRemaining
+
+    AttendanceRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        classId:
+          type: integer
+        className:
+          type: string
+        date:
+          type: string
+        attended:
+          type: boolean
+      required:
+        - id
+        - classId
+        - className
+        - date
+        - attended
+
+    Instructor:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        specialties:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - name
+        - email
+        - phone
+        - specialties
+
+    CreateInstructorBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        specialties:
+          type: array
+          items:
+            type: string
+      required:
+        - name
+        - email
+        - phone
+        - specialties
+
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: integer
+        clientName:
+          type: string
+        classId:
+          type: integer
+        className:
+          type: string
+        date:
+          type: string
+        status:
+          type: string
+          enum: [Confirmada, Pendiente, Cancelada]
+      required:
+        - id
+        - clientId
+        - clientName
+        - classId
+        - className
+        - date
+        - status
+
+    CreateReservationBody:
+      type: object
+      properties:
+        clientId:
+          type: integer
+        classId:
+          type: integer
+        date:
+          type: string
+      required:
+        - clientId
+        - classId
+        - date
+
+    DashboardSummary:
+      type: object
+      properties:
+        todayClassesCount:
+          type: integer
+        activeClientsCount:
+          type: integer
+        pendingReservationsCount:
+          type: integer
+        availableSpotsCount:
+          type: integer
+      required:
+        - todayClassesCount
+        - activeClientsCount
+        - pendingReservationsCount
+        - availableSpotsCount
