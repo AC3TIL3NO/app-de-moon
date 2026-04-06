@@ -1,0 +1,256 @@
+# Prompt para Replit AI
+
+Construye la siguiente fase de mi app SaaS para estudios de pilates. Ya existe un MVP funcional con React + Next.js + Tailwind en frontend, Node.js/Express en backend y PostgreSQL.
+
+La app ya tiene:
+
+* Login
+* Dashboard
+* Clientes
+* Clases
+* Reservas
+* Instructores
+* Calendario semanal
+
+Ahora agrega estas 5 funcionalidades:
+
+---
+
+# 1. Registro de asistencia
+
+Actualizar la tabla `bookings` agregando:
+
+* `attended` boolean default false
+* `attendedAt` timestamp nullable
+* `markedBy` string nullable
+
+Backend:
+
+* Endpoint PATCH `/bookings/:id/attendance`
+* Body:
+
+```json
+{
+  "attended": true,
+  "markedBy": "Admin"
+}
+```
+
+* Si attended = true, guardar attendedAt con la fecha actual.
+
+Frontend:
+
+* En Calendario y Reservas, agregar botón:
+
+  * "Marcar asistencia"
+  * "Quitar asistencia"
+* Mostrar badge verde “Asistió” o gris “Pendiente”.
+
+---
+
+# 2. Dashboard con gráficas
+
+Usar Recharts.
+
+Agregar estas gráficas:
+
+1. Ocupación por clase
+
+* Barra horizontal
+* Mostrar porcentaje de cupos llenos
+
+2. Clientes más frecuentes
+
+* Top 5 clientes con más asistencias
+
+3. Asistencia semanal
+
+* Línea con asistencias de lunes a domingo
+
+4. Clases más populares
+
+* Pie chart con reservas por tipo de clase
+
+Backend:
+Crear endpoints:
+
+* GET `/dashboard/occupancy`
+* GET `/dashboard/top-clients`
+* GET `/dashboard/weekly-attendance`
+* GET `/dashboard/popular-classes`
+
+---
+
+# 3. Membresías y paquetes
+
+Crear tablas PostgreSQL:
+
+```sql
+memberships (
+  id,
+  name,
+  totalClasses,
+  price,
+  durationDays,
+  createdAt
+)
+
+client_memberships (
+  id,
+  clientId,
+  membershipId,
+  remainingClasses,
+  startDate,
+  endDate,
+  status
+)
+```
+
+Agregar 3 paquetes por defecto:
+
+* 8 clases
+* 12 clases
+* Mensual ilimitado
+
+Backend:
+
+* CRUD de memberships
+* Endpoint POST `/clients/:id/membership`
+* Al reservar una clase, descontar automáticamente una clase restante.
+* No permitir reservar si remainingClasses = 0.
+
+Frontend:
+
+* Nueva sección “Membresías” en sidebar
+* Tabla de paquetes
+* Asignar membresía a un cliente
+* Mostrar clases restantes en perfil del cliente
+
+---
+
+# 4. Recordatorios automáticos por WhatsApp
+
+Usar Twilio WhatsApp API.
+
+Variables de entorno:
+
+* TWILIO_ACCOUNT_SID
+* TWILIO_AUTH_TOKEN
+* TWILIO_WHATSAPP_NUMBER
+
+Crear job automático que cada día a las 8 PM busque reservas del día siguiente.
+
+Enviar mensaje:
+“Hola {nombre} 👋 Te recordamos tu clase de Pilates mañana a las {hora} con {instructor}. ¡Te esperamos!”
+
+Backend:
+
+* Servicio `whatsappReminderService`
+* Endpoint POST `/notifications/send-test/:bookingId`
+
+Frontend:
+
+* Botón “Enviar recordatorio de prueba” dentro de una reserva.
+
+---
+
+# 5. Pagos online con Stripe
+
+Usar Stripe Checkout.
+
+Variables de entorno:
+
+* STRIPE_SECRET_KEY
+* STRIPE_WEBHOOK_SECRET
+* NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+
+Funcionalidad:
+
+* Comprar membresía
+* Renovar membresía
+* Guardar pagos en tabla `payments`
+
+Tabla:
+
+```sql
+payments (
+  id,
+  clientId,
+  membershipId,
+  amount,
+  stripeSessionId,
+  status,
+  createdAt
+)
+```
+
+Backend:
+
+* POST `/payments/create-checkout-session`
+* POST `/payments/webhook`
+
+Frontend:
+
+* Botón “Comprar paquete”
+* Redirigir a Stripe Checkout
+* Mostrar historial de pagos del cliente
+
+---
+
+# Experiencia visual y dinámica
+
+La app debe verse moderna, premium y muy fluida, similar a una mezcla entre BEWE, Notion y Stripe Dashboard.
+
+Agregar:
+
+* Animaciones suaves con Framer Motion
+* Transiciones entre pantallas
+* Sidebar colapsable con íconos
+* Cards con hover, sombra y elevación
+* Gradientes suaves en morado
+* Skeleton loaders mientras cargan datos
+* Empty states ilustrados cuando no haya reservas, clientes o clases
+* Dashboard con números animados
+* Calendario con bloques coloridos según tipo de clase
+* Modales elegantes con blur en el fondo
+* Botones con microinteracciones
+* Toasts para confirmar crear, editar o eliminar
+* Modo responsive completo para móvil, tablet y desktop
+* Diseño tipo SaaS moderno con mucho espacio en blanco
+
+Usar:
+
+* Framer Motion
+* Lucide React para íconos
+* Recharts para gráficas
+* Tailwind con rounded-2xl, shadow-lg y spacing amplio
+
+Paleta:
+
+* Fondo: blanco y gris muy claro
+* Primario: morado (#7C3AED)
+* Secundario: lavanda y gris
+* Estados:
+
+  * Verde para asistencia
+  * Amarillo para pendiente
+  * Rojo para cancelado
+
+# Requis
+
+* Mantener el diseño actual: blanco, gris suave y morado.
+* Usar Tailwind.
+* Usar modales para crear/editar.
+* Mostrar loaders y manejo de errores.
+* Generar datos seed para membresías y pagos.
+* Actualizar el dashboard automáticamente cuando cambien reservas o asistencias.
+* Mantener TypeScript estricto.
+* Crear componentes reutilizables.
+
+Orden recomendado de implementación:
+
+1. Attendance
+2. Dashboard charts
+3. Memberships
+4. WhatsApp reminders
+5. Stripe payments
