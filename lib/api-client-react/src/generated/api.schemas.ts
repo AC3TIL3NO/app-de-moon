@@ -162,6 +162,7 @@ export interface Reservation {
   className: string;
   date: string;
   status: ReservationStatus;
+  attended: boolean;
 }
 
 export interface CreateReservationBody {
@@ -170,9 +171,78 @@ export interface CreateReservationBody {
   date: string;
 }
 
+export interface MarkAttendanceBody {
+  attended: boolean;
+}
+
+export interface MembershipPlan {
+  id: number;
+  name: string;
+  description?: string;
+  totalClasses: number;
+  price: number;
+  durationDays: number;
+  active: boolean;
+}
+
+export interface CreateMembershipBody {
+  name: string;
+  description?: string;
+  totalClasses: number;
+  price: number;
+  durationDays: number;
+  active?: boolean;
+}
+
+export type ClientMembershipStatus =
+  (typeof ClientMembershipStatus)[keyof typeof ClientMembershipStatus];
+
+export const ClientMembershipStatus = {
+  Activa: "Activa",
+  Vencida: "Vencida",
+  Agotada: "Agotada",
+  Cancelada: "Cancelada",
+} as const;
+
+export interface ClientMembership {
+  id: number;
+  clientId: number;
+  membershipId: number;
+  membershipName: string;
+  clientName: string;
+  startDate: string;
+  endDate: string;
+  classesUsed: number;
+  classesTotal: number;
+  status: ClientMembershipStatus;
+}
+
+export interface CreateClientMembershipBody {
+  clientId: number;
+  membershipId: number;
+  membershipName: string;
+  clientName: string;
+  startDate: string;
+  endDate: string;
+  classesTotal: number;
+  status?: string;
+}
+
 export interface DashboardSummary {
   todayClassesCount: number;
   activeClientsCount: number;
   pendingReservationsCount: number;
   availableSpotsCount: number;
+}
+
+export interface OccupancyItem {
+  className: string;
+  enrolled: number;
+  capacity: number;
+  fillPct: number;
+}
+
+export interface TopClientItem {
+  clientName: string;
+  reservationsCount: number;
 }

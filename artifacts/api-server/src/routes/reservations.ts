@@ -5,6 +5,8 @@ import {
   CreateReservationBody,
   CancelReservationParams,
   ListReservationsResponse,
+  MarkAttendanceBody,
+  MarkAttendanceParams,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -29,6 +31,7 @@ router.get("/reservations", async (_req, res): Promise<void> => {
     ...r,
     clientName: r.clientName ?? "Cliente desconocido",
     className: r.className ?? "Clase desconocida",
+    attended: r.attended ?? false,
   }));
   res.json(ListReservationsResponse.parse(mapped));
 });
@@ -62,6 +65,35 @@ router.post("/reservations", async (req, res): Promise<void> => {
     className: cls?.name ?? "Clase desconocida",
     date: reservation.date,
     status: reservation.status,
+  });
+});
+
+router.patch("/reservations/:id/attendance", async (req, res): Promise<void> => {
+  const params = MarkAttendanceParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: "Invalid id" }); return; }
+  const body = MarkAttendanceBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.message }); return; }
+
+  const [updated] = await db
+    .update(reservationsTable)
+    .set({ attended: body.data.attended })
+    .where(eq(reservationsTable.id, params.data.id))
+    .returning();
+
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+
+  const [client] = await db.select().from(clientsTable).where(eq(clientsTable.id, updated.clientId));
+  const [cls] = await db.select().from(classesTable).where(eq(classesTable.id, updated.classId));
+
+  res.json({
+    id: updated.id,
+    clientId: updated.clientId,
+    clientName: client?.name ?? "Cliente desconocido",
+    classId: updated.classId,
+    className: cls?.name ?? "Clase desconocida",
+    date: updated.date,
+    status: updated.status,
+    attended: updated.attended,
   });
 });
 

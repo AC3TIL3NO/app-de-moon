@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { clientsTable } from "./clients";
@@ -10,9 +10,10 @@ export const reservationsTable = pgTable("reservations", {
   classId: integer("class_id").notNull().references(() => classesTable.id),
   date: text("date").notNull(),
   status: text("status").notNull().default("Confirmada"),
+  attended: boolean("attended").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const insertReservationSchema = createInsertSchema(reservationsTable).omit({ id: true, createdAt: true, status: true });
+export const insertReservationSchema = createInsertSchema(reservationsTable).omit({ id: true, createdAt: true, status: true, attended: true });
 export type InsertReservation = z.infer<typeof insertReservationSchema>;
 export type Reservation = typeof reservationsTable.$inferSelect;

@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, CalendarDays, CalendarClock, UserSquare2, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, CalendarClock, UserSquare2, CreditCard, LogOut } from "lucide-react";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -12,6 +12,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { name: "Clientes", href: "/clients", icon: Users },
     { name: "Calendario", href: "/calendar", icon: CalendarDays },
     { name: "Instructores", href: "/instructors", icon: UserSquare2 },
+    { name: "Membresías", href: "/memberships", icon: CreditCard },
   ];
 
   return (

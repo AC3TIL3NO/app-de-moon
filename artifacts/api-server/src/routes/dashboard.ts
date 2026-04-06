@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, classesTable, clientsTable, reservationsTable, instructorsTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import {
   GetDashboardSummaryResponse,
   GetTodayClassesResponse,
@@ -76,6 +76,40 @@ router.get("/dashboard/recent-clients", async (_req, res): Promise<void> => {
     .limit(5);
 
   res.json(GetRecentClientsResponse.parse(clients.map((c) => ({ ...c, notes: c.notes ?? undefined, createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt }))));
+});
+
+router.get("/dashboard/occupancy", async (_req, res): Promise<void> => {
+  const classes = await db.select({
+    name: classesTable.name,
+    enrolled: classesTable.enrolled,
+    capacity: classesTable.capacity,
+  }).from(classesTable).orderBy(classesTable.name);
+
+  const data = classes.map((c) => ({
+    className: c.name,
+    enrolled: c.enrolled,
+    capacity: c.capacity,
+    fillPct: c.capacity > 0 ? Math.round((c.enrolled / c.capacity) * 100) : 0,
+  }));
+  res.json(data);
+});
+
+router.get("/dashboard/top-clients", async (_req, res): Promise<void> => {
+  const rows = await db
+    .select({
+      clientName: clientsTable.name,
+      reservationsCount: sql<number>`count(${reservationsTable.id})::int`,
+    })
+    .from(reservationsTable)
+    .leftJoin(clientsTable, eq(reservationsTable.clientId, clientsTable.id))
+    .groupBy(clientsTable.name)
+    .orderBy(desc(sql`count(${reservationsTable.id})`))
+    .limit(8);
+
+  res.json(rows.map((r) => ({
+    clientName: r.clientName ?? "Desconocido",
+    reservationsCount: r.reservationsCount,
+  })));
 });
 
 export default router;

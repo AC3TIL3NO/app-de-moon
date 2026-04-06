@@ -15,4 +15,5 @@ export interface Reservation {
   className: string;
   date: string;
   status: ReservationStatus;
+  attended: boolean;
 }

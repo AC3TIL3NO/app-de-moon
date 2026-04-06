@@ -244,6 +244,7 @@ export const ListReservationsResponseItem = zod.object({
   className: zod.string(),
   date: zod.string(),
   status: zod.enum(["Confirmada", "Pendiente", "Cancelada"]),
+  attended: zod.boolean(),
 });
 export const ListReservationsResponse = zod.array(ListReservationsResponseItem);
 
@@ -260,6 +261,101 @@ export const CreateReservationBody = zod.object({
  * @summary Cancel a reservation
  */
 export const CancelReservationParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Mark or unmark attendance for a reservation
+ */
+export const MarkAttendanceParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const MarkAttendanceBody = zod.object({
+  attended: zod.boolean(),
+});
+
+export const MarkAttendanceResponse = zod.object({
+  id: zod.number(),
+  clientId: zod.number(),
+  clientName: zod.string(),
+  classId: zod.number(),
+  className: zod.string(),
+  date: zod.string(),
+  status: zod.enum(["Confirmada", "Pendiente", "Cancelada"]),
+  attended: zod.boolean(),
+});
+
+/**
+ * @summary List all membership plans
+ */
+export const ListMembershipsResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  description: zod.string().optional(),
+  totalClasses: zod.number(),
+  price: zod.number(),
+  durationDays: zod.number(),
+  active: zod.boolean(),
+});
+export const ListMembershipsResponse = zod.array(ListMembershipsResponseItem);
+
+/**
+ * @summary Create a membership plan
+ */
+export const CreateMembershipBody = zod.object({
+  name: zod.string(),
+  description: zod.string().optional(),
+  totalClasses: zod.number(),
+  price: zod.number(),
+  durationDays: zod.number(),
+  active: zod.boolean().optional(),
+});
+
+/**
+ * @summary Delete a membership plan
+ */
+export const DeleteMembershipParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary List all client memberships
+ */
+export const ListClientMembershipsResponseItem = zod.object({
+  id: zod.number(),
+  clientId: zod.number(),
+  membershipId: zod.number(),
+  membershipName: zod.string(),
+  clientName: zod.string(),
+  startDate: zod.string(),
+  endDate: zod.string(),
+  classesUsed: zod.number(),
+  classesTotal: zod.number(),
+  status: zod.enum(["Activa", "Vencida", "Agotada", "Cancelada"]),
+});
+export const ListClientMembershipsResponse = zod.array(
+  ListClientMembershipsResponseItem,
+);
+
+/**
+ * @summary Assign a membership to a client
+ */
+export const CreateClientMembershipBody = zod.object({
+  clientId: zod.number(),
+  membershipId: zod.number(),
+  membershipName: zod.string(),
+  clientName: zod.string(),
+  startDate: zod.string(),
+  endDate: zod.string(),
+  classesTotal: zod.number(),
+  status: zod.string().optional(),
+});
+
+/**
+ * @summary Cancel a client membership
+ */
+export const DeleteClientMembershipParams = zod.object({
   id: zod.coerce.number(),
 });
 
@@ -307,3 +403,27 @@ export const GetRecentClientsResponseItem = zod.object({
   createdAt: zod.string(),
 });
 export const GetRecentClientsResponse = zod.array(GetRecentClientsResponseItem);
+
+/**
+ * @summary Get class occupancy chart data
+ */
+export const GetDashboardOccupancyResponseItem = zod.object({
+  className: zod.string(),
+  enrolled: zod.number(),
+  capacity: zod.number(),
+  fillPct: zod.number(),
+});
+export const GetDashboardOccupancyResponse = zod.array(
+  GetDashboardOccupancyResponseItem,
+);
+
+/**
+ * @summary Get top clients by reservations
+ */
+export const GetDashboardTopClientsResponseItem = zod.object({
+  clientName: zod.string(),
+  reservationsCount: zod.number(),
+});
+export const GetDashboardTopClientsResponse = zod.array(
+  GetDashboardTopClientsResponseItem,
+);

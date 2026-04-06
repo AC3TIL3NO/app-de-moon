@@ -18,6 +18,10 @@ tags:
     description: Instructor operations
   - name: reservations
     description: Reservation operations
+  - name: memberships
+    description: Membership plan operations
+  - name: clientMemberships
+    description: Client membership operations
   - name: dashboard
     description: Dashboard summary operations
 
@@ -309,6 +313,125 @@ paths:
         "204":
           description: Cancelled
 
+  /reservations/{id}/attendance:
+    patch:
+      operationId: markAttendance
+      tags: [reservations]
+      summary: Mark or unmark attendance for a reservation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkAttendanceBody"
+      responses:
+        "200":
+          description: Updated reservation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reservation"
+
+  /memberships:
+    get:
+      operationId: listMemberships
+      tags: [memberships]
+      summary: List all membership plans
+      responses:
+        "200":
+          description: List of membership plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MembershipPlan"
+    post:
+      operationId: createMembership
+      tags: [memberships]
+      summary: Create a membership plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMembershipBody"
+      responses:
+        "201":
+          description: Created membership plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MembershipPlan"
+
+  /memberships/{id}:
+    delete:
+      operationId: deleteMembership
+      tags: [memberships]
+      summary: Delete a membership plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /client-memberships:
+    get:
+      operationId: listClientMemberships
+      tags: [clientMemberships]
+      summary: List all client memberships
+      responses:
+        "200":
+          description: List of client memberships
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClientMembership"
+    post:
+      operationId: createClientMembership
+      tags: [clientMemberships]
+      summary: Assign a membership to a client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClientMembershipBody"
+      responses:
+        "201":
+          description: Created client membership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientMembership"
+
+  /client-memberships/{id}:
+    delete:
+      operationId: deleteClientMembership
+      tags: [clientMemberships]
+      summary: Cancel a client membership
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Cancelled
+
   /dashboard/summary:
     get:
       operationId: getDashboardSummary
@@ -351,6 +474,36 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Client"
+
+  /dashboard/occupancy:
+    get:
+      operationId: getDashboardOccupancy
+      tags: [dashboard]
+      summary: Get class occupancy chart data
+      responses:
+        "200":
+          description: Occupancy data per class
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OccupancyItem"
+
+  /dashboard/top-clients:
+    get:
+      operationId: getDashboardTopClients
+      tags: [dashboard]
+      summary: Get top clients by reservations
+      responses:
+        "200":
+          description: Top clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TopClientItem"
 
 components:
   schemas:
@@ -575,6 +728,8 @@ components:
         status:
           type: string
           enum: [Confirmada, Pendiente, Cancelada]
+        attended:
+          type: boolean
       required:
         - id
         - clientId
@@ -583,6 +738,7 @@ components:
         - className
         - date
         - status
+        - attended
 
     CreateReservationBody:
       type: object
@@ -597,6 +753,124 @@ components:
         - clientId
         - classId
         - date
+
+    MarkAttendanceBody:
+      type: object
+      properties:
+        attended:
+          type: boolean
+      required:
+        - attended
+
+    MembershipPlan:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        totalClasses:
+          type: integer
+        price:
+          type: integer
+        durationDays:
+          type: integer
+        active:
+          type: boolean
+      required:
+        - id
+        - name
+        - totalClasses
+        - price
+        - durationDays
+        - active
+
+    CreateMembershipBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        totalClasses:
+          type: integer
+        price:
+          type: integer
+        durationDays:
+          type: integer
+        active:
+          type: boolean
+      required:
+        - name
+        - totalClasses
+        - price
+        - durationDays
+
+    ClientMembership:
+      type: object
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: integer
+        membershipId:
+          type: integer
+        membershipName:
+          type: string
+        clientName:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+        classesUsed:
+          type: integer
+        classesTotal:
+          type: integer
+        status:
+          type: string
+          enum: [Activa, Vencida, Agotada, Cancelada]
+      required:
+        - id
+        - clientId
+        - membershipId
+        - membershipName
+        - clientName
+        - startDate
+        - endDate
+        - classesUsed
+        - classesTotal
+        - status
+
+    CreateClientMembershipBody:
+      type: object
+      properties:
+        clientId:
+          type: integer
+        membershipId:
+          type: integer
+        membershipName:
+          type: string
+        clientName:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+        classesTotal:
+          type: integer
+        status:
+          type: string
+      required:
+        - clientId
+        - membershipId
+        - membershipName
+        - clientName
+        - startDate
+        - endDate
+        - classesTotal
 
     DashboardSummary:
       type: object
@@ -614,3 +888,31 @@ components:
         - activeClientsCount
         - pendingReservationsCount
         - availableSpotsCount
+
+    OccupancyItem:
+      type: object
+      properties:
+        className:
+          type: string
+        enrolled:
+          type: integer
+        capacity:
+          type: integer
+        fillPct:
+          type: integer
+      required:
+        - className
+        - enrolled
+        - capacity
+        - fillPct
+
+    TopClientItem:
+      type: object
+      properties:
+        clientName:
+          type: string
+        reservationsCount:
+          type: integer
+      required:
+        - clientName
+        - reservationsCount

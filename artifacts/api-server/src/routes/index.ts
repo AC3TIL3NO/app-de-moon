@@ -5,6 +5,7 @@ import clientsRouter from "./clients";
 import classesRouter from "./classes";
 import reservationsRouter from "./reservations";
 import dashboardRouter from "./dashboard";
+import membershipsRouter from "./memberships";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(clientsRouter);
 router.use(classesRouter);
 router.use(reservationsRouter);
 router.use(dashboardRouter);
+router.use(membershipsRouter);
 
 export default router;

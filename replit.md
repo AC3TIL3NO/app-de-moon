@@ -28,12 +28,19 @@ A management MVP for pilates studios with the following screens:
 - **Clientes** — client table with side panel (attendance history, notes)
 - **Calendario** — weekly grid view with class blocks and reservation management
 - **Instructores** — instructor list/cards
+- **Membresías** — membership plans CRUD + client membership assignment and status tracking
 
 ### Data Model
 - **instructors** — name, email, phone, specialties[]
 - **classes** — name, instructorId, time, duration, capacity, enrolled, level, type, status, dayOfWeek, date
 - **clients** — name, phone, email, plan, classesRemaining, notes
-- **reservations** — clientId, classId, date, status
+- **reservations** — clientId, classId, date, status, attended (bool)
+- **memberships** — name, description, totalClasses, price, durationDays, active
+- **client_memberships** — clientId, membershipId, membershipName, clientName, startDate, endDate, classesUsed, classesTotal, status
+
+### Dashboard Charts
+- **Ocupación Semanal** — BarChart via Recharts showing occupancy % by day of week
+- **Top Clientes** — Horizontal BarChart showing clients ranked by classes attended
 
 ## Key Commands
 

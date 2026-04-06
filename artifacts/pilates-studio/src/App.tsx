@@ -9,6 +9,7 @@ import Classes from "@/pages/classes";
 import Clients from "@/pages/clients";
 import Calendar from "@/pages/calendar";
 import Instructors from "@/pages/instructors";
+import Memberships from "@/pages/memberships";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ function Router() {
             <Route path="/clients" component={Clients} />
             <Route path="/calendar" component={Calendar} />
             <Route path="/instructors" component={Instructors} />
+            <Route path="/memberships" component={Memberships} />
             <Route>
               <div className="p-16 text-center text-muted-foreground flex flex-col items-center justify-center">
                 <div className="h-16 w-16 bg-muted rounded-2xl mb-4 flex items-center justify-center text-2xl font-bold text-muted-foreground/50">404</div>

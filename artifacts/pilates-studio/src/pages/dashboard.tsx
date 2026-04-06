@@ -1,4 +1,10 @@
-import { useGetDashboardSummary, useGetTodayClasses, useGetRecentClients } from "@workspace/api-client-react";
+import {
+  useGetDashboardSummary,
+  useGetTodayClasses,
+  useGetRecentClients,
+  useGetDashboardOccupancy,
+  useGetDashboardTopClients,
+} from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
@@ -6,11 +12,22 @@ import { Users, CalendarClock, TicketCheck, UserPlus, ArrowRight } from "lucide-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function Dashboard() {
   const { data: summary, isLoading: loadingSummary } = useGetDashboardSummary();
   const { data: todayClasses, isLoading: loadingClasses } = useGetTodayClasses();
   const { data: recentClients, isLoading: loadingClients } = useGetRecentClients();
+  const { data: occupancy, isLoading: loadingOccupancy } = useGetDashboardOccupancy();
+  const { data: topClients, isLoading: loadingTopClients } = useGetDashboardTopClients();
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -20,29 +37,29 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard 
-          title="Clases de Hoy" 
-          value={summary?.todayClassesCount} 
-          icon={CalendarClock} 
-          loading={loadingSummary} 
+        <StatCard
+          title="Clases de Hoy"
+          value={summary?.todayClassesCount}
+          icon={CalendarClock}
+          loading={loadingSummary}
         />
-        <StatCard 
-          title="Clientes Activos" 
-          value={summary?.activeClientsCount} 
-          icon={Users} 
-          loading={loadingSummary} 
+        <StatCard
+          title="Clientes Activos"
+          value={summary?.activeClientsCount}
+          icon={Users}
+          loading={loadingSummary}
         />
-        <StatCard 
-          title="Reservas Pendientes" 
-          value={summary?.pendingReservationsCount} 
-          icon={TicketCheck} 
-          loading={loadingSummary} 
+        <StatCard
+          title="Reservas Pendientes"
+          value={summary?.pendingReservationsCount}
+          icon={TicketCheck}
+          loading={loadingSummary}
         />
-        <StatCard 
-          title="Cupos Disponibles" 
-          value={summary?.availableSpotsCount} 
-          icon={UserPlus} 
-          loading={loadingSummary} 
+        <StatCard
+          title="Cupos Disponibles"
+          value={summary?.availableSpotsCount}
+          icon={UserPlus}
+          loading={loadingSummary}
         />
       </div>
 
@@ -94,8 +111,8 @@ export default function Dashboard() {
                         <div className="text-xs text-muted-foreground">Inscritos</div>
                       </div>
                       <Badge variant="secondary" className={
-                        cls.status === 'Activa' ? 'bg-primary/10 text-primary hover:bg-primary/20' : 
-                        cls.status === 'Completa' ? 'bg-orange-500/10 text-orange-600 hover:bg-orange-500/20' : 
+                        cls.status === 'Activa' ? 'bg-primary/10 text-primary hover:bg-primary/20' :
+                        cls.status === 'Completa' ? 'bg-orange-500/10 text-orange-600 hover:bg-orange-500/20' :
                         'bg-muted text-muted-foreground'
                       }>
                         {cls.status}
@@ -114,7 +131,7 @@ export default function Dashboard() {
               <CardTitle>Calendario</CardTitle>
             </CardHeader>
             <CardContent>
-              <Calendar 
+              <Calendar
                 mode="single"
                 selected={new Date()}
                 className="rounded-md border-0 w-full"
@@ -168,6 +185,68 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="shadow-sm border-border/50">
+          <CardHeader>
+            <CardTitle>Ocupación Semanal</CardTitle>
+            <CardDescription>Porcentaje de ocupación promedio por día de la semana.</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-2">
+            {loadingOccupancy ? (
+              <Skeleton className="h-52 w-full rounded-xl" />
+            ) : !occupancy || occupancy.length === 0 ? (
+              <div className="h-52 flex items-center justify-center text-muted-foreground text-sm border border-dashed rounded-xl bg-muted/20">
+                Sin datos de ocupación disponibles.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={210}>
+                <BarChart data={occupancy} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} unit="%" />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", color: "hsl(var(--foreground))" }}
+                    formatter={(v: number) => [`${v}%`, "Ocupación"]}
+                    cursor={{ fill: "hsl(var(--accent))", radius: 6 }}
+                  />
+                  <Bar dataKey="occupancyPercent" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} maxBarSize={48} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border-border/50">
+          <CardHeader>
+            <CardTitle>Top Clientes</CardTitle>
+            <CardDescription>Clientes con más clases asistidas.</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-2">
+            {loadingTopClients ? (
+              <Skeleton className="h-52 w-full rounded-xl" />
+            ) : !topClients || topClients.length === 0 ? (
+              <div className="h-52 flex items-center justify-center text-muted-foreground text-sm border border-dashed rounded-xl bg-muted/20">
+                Sin datos de asistencia disponibles.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={210}>
+                <BarChart data={topClients} layout="vertical" margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <YAxis type="category" dataKey="clientName" width={80} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", color: "hsl(var(--foreground))" }}
+                    formatter={(v: number) => [v, "Clases"]}
+                    cursor={{ fill: "hsl(var(--accent))" }}
+                  />
+                  <Bar dataKey="classesAttended" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} maxBarSize={28} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
