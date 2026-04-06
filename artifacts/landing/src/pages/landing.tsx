@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
+import { useLocation } from "wouter";
 import {
   CalendarCheck2,
   MessageCircle,
@@ -19,10 +20,14 @@ import {
   Shield,
   Zap,
   Heart,
+  UserCircle2,
 } from "lucide-react";
 import heroBg from "@assets/40b756_86a22044bf6b4d728b69b627f57b50ec~mv2_1775503320084.avif";
 import studioBg from "@assets/40b756_4f1dc1bd9ca941efa4af8c07e580dd1b~mv2_1775503621543.avif";
 import logoBlack from "@assets/Moon_Pilates_Studio_Logo_TEXTO_NEGRO_1775503679484.png";
+import { useClientAuth } from "@/contexts/clientAuth";
+import { AuthModal } from "@/components/AuthModal";
+import { BookingModal } from "@/components/BookingModal";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -161,6 +166,12 @@ const BENEFITS = [
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [preselectedClass, setPreselectedClass] = useState<{ name: string } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const { client } = useClientAuth();
+  const [, navigate] = useLocation();
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 40);
@@ -171,6 +182,20 @@ export default function LandingPage() {
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
     setMobileOpen(false);
+  };
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleReservar = (className?: string) => {
+    if (client) {
+      setPreselectedClass(className ? { name: className } : null);
+      setBookingOpen(true);
+    } else {
+      setAuthOpen(true);
+    }
   };
 
   return (
@@ -213,14 +238,44 @@ export default function LandingPage() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <motion.button
-              onClick={() => scrollTo("contact")}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              className="bg-violet-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-violet-700 transition-colors shadow-sm"
-            >
-              Reservar clase
-            </motion.button>
+            {client ? (
+              <>
+                <motion.button
+                  onClick={() => navigate("/dashboard")}
+                  whileHover={{ scale: 1.03 }}
+                  className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-xl transition-colors ${scrolled ? "text-gray-700 hover:bg-gray-100" : "text-white/80 hover:bg-white/10"}`}
+                >
+                  <UserCircle2 className="h-4 w-4" />
+                  {client.name.split(" ")[0]}
+                </motion.button>
+                <motion.button
+                  onClick={() => handleReservar()}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="bg-violet-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-violet-700 transition-colors shadow-sm"
+                >
+                  Reservar clase
+                </motion.button>
+              </>
+            ) : (
+              <>
+                <motion.button
+                  onClick={() => setAuthOpen(true)}
+                  whileHover={{ scale: 1.03 }}
+                  className={`text-sm font-medium px-4 py-2 rounded-xl transition-colors ${scrolled ? "text-gray-700 hover:bg-gray-100" : "text-white/80 hover:bg-white/10"}`}
+                >
+                  Iniciar sesión
+                </motion.button>
+                <motion.button
+                  onClick={() => handleReservar()}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="bg-violet-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-violet-700 transition-colors shadow-sm"
+                >
+                  Reservar clase
+                </motion.button>
+              </>
+            )}
           </div>
 
           <button
@@ -250,7 +305,7 @@ export default function LandingPage() {
                   </button>
                 ))}
                 <button
-                  onClick={() => scrollTo("contact")}
+                  onClick={() => { setMobileOpen(false); handleReservar(); }}
                   className="mt-3 w-full bg-violet-600 text-white text-sm font-semibold py-3 rounded-xl hover:bg-violet-700 transition-colors"
                 >
                   Reservar clase
@@ -322,7 +377,7 @@ export default function LandingPage() {
               className="mt-10 flex flex-col sm:flex-row gap-4"
             >
               <motion.button
-                onClick={() => scrollTo("contact")}
+                onClick={() => handleReservar()}
                 whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.97 }}
                 className="flex items-center justify-center gap-2 bg-violet-600 text-white font-semibold px-8 py-4 rounded-2xl hover:bg-violet-700 transition-colors shadow-lg shadow-violet-900/30 text-base"
@@ -571,7 +626,7 @@ export default function LandingPage() {
                   <h3 className="text-lg font-bold text-gray-900 mb-2">{cls.title}</h3>
                   <p className="text-sm text-gray-500 leading-relaxed mb-5">{cls.desc}</p>
                   <button
-                    onClick={() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })}
+                    onClick={() => handleReservar(cls.title)}
                     className="w-full flex items-center justify-center gap-1.5 bg-gray-900 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-violet-600 transition-colors"
                   >
                     Reservar
@@ -653,7 +708,7 @@ export default function LandingPage() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })}
+                  onClick={() => handleReservar()}
                   className={`w-full py-3.5 rounded-2xl font-semibold text-sm transition-all ${
                     plan.highlight
                       ? "bg-violet-600 text-white hover:bg-violet-500 shadow-lg shadow-violet-900/20"
@@ -916,6 +971,44 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authOpen}
+        onClose={() => setAuthOpen(false)}
+        onSuccess={() => {
+          setAuthOpen(false);
+          setBookingOpen(true);
+        }}
+      />
+
+      {/* Booking Modal */}
+      <BookingModal
+        isOpen={bookingOpen}
+        onClose={() => setBookingOpen(false)}
+        preselectedClass={preselectedClass}
+        onNeedAuth={() => { setBookingOpen(false); setAuthOpen(true); }}
+        onSuccess={() => {
+          setBookingOpen(false);
+          showToast("Reserva confirmada. Te esperamos en Moon Pilates Studio.");
+        }}
+      />
+
+      {/* Toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed bottom-6 right-6 z-[200] flex items-center gap-3 bg-gray-900 text-white text-sm font-semibold px-5 py-3.5 rounded-2xl shadow-2xl"
+          >
+            <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

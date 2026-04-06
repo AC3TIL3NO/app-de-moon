@@ -10,6 +10,7 @@ export const clientsTable = pgTable("clients", {
   plan: text("plan").notNull(),
   classesRemaining: integer("classes_remaining").notNull().default(0),
   notes: text("notes"),
+  passwordHash: text("password_hash"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

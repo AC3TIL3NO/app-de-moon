@@ -11,6 +11,7 @@ import paymentsRouter from "./payments";
 import authRouter from "./auth";
 import studioRouter from "./studio";
 import reportsRouter from "./reports";
+import clientAuthRouter from "./clientAuth";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(dashboardRouter);
 router.use(membershipsRouter);
 router.use(notificationsRouter);
 router.use(paymentsRouter);
+router.use(clientAuthRouter);
 
 export default router;

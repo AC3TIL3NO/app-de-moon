@@ -74,9 +74,33 @@ A production-ready multi-tenant SaaS for pilates studio management with:
 - Stripe webhook + checkout session creation
 - WhatsApp notifications via Twilio
 
+### Data Model (additions)
+- **clients.passwordHash** — Optional password hash enabling client portal login
+
+### Client Portal (Landing Page — /landing)
+- Full booking flow integrated into the public landing page
+- **Auth modal** — triggered by any "Reservar" / "Comprar paquete" CTA; tabs for Login / Register
+  - Client register: POST /api/client/register (name, email, phone, password)
+  - Client login: POST /api/client/login (email, password → JWT with type="client")
+  - Token stored in localStorage (`moon_client_token`)
+- **Booking modal** — opens after auth; shows live class list from /api/client/classes
+  - Select class → choose date → confirm → deducts from membership or classesRemaining
+  - POST /api/client/reserve — saves reservation to DB, updates enrolled count
+  - Membership check: if active clientMembership, classesUsed incremented; if no membership and no classes remaining, returns 402 with CTA
+- **Client dashboard** (/landing/dashboard)
+  - Sidebar: Mis Reservas, Membresía, Perfil, Historial
+  - Mis Reservas: upcoming classes with cancel button, stat cards
+  - Membresía: active plan card with progress bar, available plan list
+  - Perfil: user info, logout
+  - Historial: all reservations with attendance status
+  - Redirects to / if not authenticated
+- **Navbar updates**: "Iniciar sesión" + "Reservar clase" when logged out; user first name + "Reservar clase" when logged in
+
 ### Landing Page (at /landing)
-- Hero, Features (6 items), Pricing (3 plans), Testimonials, FAQ accordion, CTA section
-- Framer Motion scroll animations, sticky nav, mobile hamburger menu
+- Moon Pilates Studio branding: real logo PNG + 2 AVIF reformer photos
+- Hero, booking steps, about, class types (5 cards), memberships (3 plans), benefits, contact/map, footer
+- Framer Motion scroll animations, sticky nav with scroll-to-white effect, mobile hamburger menu
+- All "Reservar" + "Comprar paquete" + "Quiero empezar hoy" buttons trigger auth/booking flow
 
 ## Key Commands
 
