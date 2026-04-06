@@ -2,6 +2,10 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Calendar, Clock, User, Users, CheckCircle2, ArrowRight, AlertCircle } from "lucide-react";
 import { useClientAuth, getClientAuthHeaders, API_BASE } from "@/contexts/clientAuth";
+import heroBg from "@assets/40b756_86a22044bf6b4d728b69b627f57b50ec~mv2_1775503320084.avif";
+import studioBg from "@assets/40b756_4f1dc1bd9ca941efa4af8c07e580dd1b~mv2_1775503621543.avif";
+
+const CLASS_PHOTOS = [heroBg, studioBg];
 
 interface ClassItem {
   id: number;
@@ -134,19 +138,24 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
                       <p>No hay clases disponibles por el momento.</p>
                     </div>
                   ) : (
-                    classes.map(cls => (
+                    classes.map((cls, i) => (
                       <motion.button
                         key={cls.id}
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
                         onClick={() => handleSelectClass(cls)}
-                        className="w-full flex items-start gap-4 p-4 rounded-2xl border border-gray-100 hover:border-violet-200 hover:bg-violet-50/30 transition-all text-left group"
+                        className="w-full flex items-start gap-4 p-3 rounded-2xl border border-gray-100 hover:border-violet-200 hover:shadow-md transition-all text-left group overflow-hidden"
                       >
-                        <div className="h-12 w-12 rounded-xl bg-violet-100 flex items-center justify-center shrink-0 group-hover:bg-violet-200 transition-colors">
-                          <Calendar className="h-5 w-5 text-violet-600" />
+                        <div className="h-16 w-20 rounded-xl overflow-hidden shrink-0 relative">
+                          <img
+                            src={CLASS_PHOTOS[i % CLASS_PHOTOS.length]}
+                            alt={cls.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                        <div className="flex-1 min-w-0 py-0.5">
+                          <div className="flex items-center gap-2 mb-1.5">
                             <span className="font-semibold text-gray-900 text-sm">{cls.name}</span>
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${LEVELS[cls.level] ?? "bg-gray-100 text-gray-600"}`}>{cls.level}</span>
                           </div>
@@ -156,7 +165,7 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
                             <span className="flex items-center gap-1"><Users className="h-3 w-3" />{cls.capacity - cls.enrolled} cupos</span>
                           </div>
                         </div>
-                        <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-violet-500 transition-colors shrink-0 mt-3" />
+                        <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-violet-500 transition-colors shrink-0 mt-4" />
                       </motion.button>
                     ))
                   )}
@@ -166,16 +175,23 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
               {/* Step: Confirm */}
               {step === "confirm" && selected && (
                 <div className="space-y-5">
-                  <div className="bg-violet-50 border border-violet-100 rounded-2xl p-5 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-xl bg-violet-600 flex items-center justify-center shrink-0">
-                        <Calendar className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <div className="font-bold text-gray-900">{selected.name}</div>
-                        <div className="text-sm text-violet-600 font-medium">{selected.type}</div>
+                  <div className="rounded-2xl overflow-hidden border border-violet-100">
+                    <div className="relative h-32">
+                      <img
+                        src={CLASS_PHOTOS[selected.id % CLASS_PHOTOS.length]}
+                        alt={selected.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 via-gray-900/30 to-transparent" />
+                      <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
+                        <div>
+                          <div className="font-bold text-white text-base leading-tight">{selected.name}</div>
+                          <div className="text-violet-300 text-xs font-medium mt-0.5">{selected.type} · {selected.level}</div>
+                        </div>
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${LEVELS[selected.level] ?? "bg-gray-100 text-gray-700"}`}>{selected.level}</span>
                       </div>
                     </div>
+                    <div className="bg-violet-50 p-4 space-y-3">
                     <div className="grid grid-cols-2 gap-3 pt-1">
                       {[
                         { icon: Clock, label: "Hora", value: selected.time },
@@ -191,6 +207,7 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
                           <div className="text-sm font-semibold text-gray-900">{item.value}</div>
                         </div>
                       ))}
+                    </div>
                     </div>
                   </div>
 

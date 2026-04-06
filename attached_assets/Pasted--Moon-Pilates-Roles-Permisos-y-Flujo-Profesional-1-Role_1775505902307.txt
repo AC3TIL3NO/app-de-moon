@@ -1,0 +1,324 @@
+# Moon Pilates — Roles, Permisos y Flujo Profesional
+
+## 1. Roles del sistema
+
+### Administrador
+
+Tiene acceso completo a todo el sistema.
+
+Puede ver:
+
+* Dashboard general
+* Todas las clases
+* Todos los clientes
+* Todos los instructores
+* Todos los pagos
+* Membresías
+* Reportes
+* Configuración
+* Historial de acciones
+
+Puede hacer:
+
+* Crear, editar y eliminar clases
+* Crear, editar y eliminar instructores
+* Crear, editar y eliminar recepcionistas/cajeras
+* Cambiar precios y membresías
+* Ver quién cobró cada pago
+* Ver quién impartió cada clase
+* Ver ocupación, ingresos y métricas
+* Exportar reportes PDF o Excel
+
+---
+
+### Recepcionista / Cajera
+
+Gestiona clientes, reservas y pagos.
+
+Puede ver:
+
+* Agenda del día
+* Lista de clientes
+* Reservas
+* Pagos
+* Membresías
+
+Puede hacer:
+
+* Registrar nuevos clientes
+* Reservar clases
+* Cancelar o mover reservas
+* Cobrar membresías o clases sueltas
+* Elegir método de pago
+* Ver cuánto debe un cliente
+* Registrar asistencia
+
+NO puede:
+
+* Borrar instructores
+* Cambiar configuraciones globales
+* Ver reportes financieros completos
+
+---
+
+### Instructor
+
+Solo ve la información relacionada con sus clases.
+
+Puede ver:
+
+* Sus clases del día y de la semana
+* Horario
+* Nombre de los alumnos inscritos
+* Cupos disponibles
+* Asistencia
+* Notas del cliente (lesión, embarazo, limitación física, etc.)
+
+Puede hacer:
+
+* Marcar asistencia
+* Ver quién faltó
+* Agregar observaciones rápidas
+* Ver cuántos alumnos tiene por clase
+
+NO puede:
+
+* Ver pagos
+* Ver información financiera
+* Editar otras clases
+* Ver otros instructores
+
+---
+
+### Cliente
+
+Entra desde la landing o app.
+
+Puede ver:
+
+* Sus próximas clases
+* Historial
+* Membresía activa
+* Clases restantes
+* Métodos de pago
+* Facturas
+
+Puede hacer:
+
+* Reservar
+* Cancelar
+* Reprogramar
+* Comprar membresía
+* Pagar online
+
+---
+
+# 2. Pagos y Caja
+
+Cada pago debe guardar:
+
+* Cliente
+* Fecha
+* Hora
+* Monto
+* Concepto
+
+  * Membresía
+  * Clase individual
+  * Penalidad
+  * Producto
+* Método de pago
+* Cajera que cobró
+* Estado
+
+## Métodos de pago
+
+Debe existir un selector con:
+
+* Efectivo
+* Tarjeta
+* Yappy
+* Transferencia bancaria
+* Pago online por Stripe
+* Otro
+
+## Ejemplo de registro
+
+| Cliente      | Concepto            | Método   | Cajera | Monto |
+| ------------ | ------------------- | -------- | ------ | ----- |
+| Ana Pérez    | Membresía Moon Flow | Yappy    | María  | $120  |
+| Laura Gómez  | Clase individual    | Efectivo | Sofía  | $18   |
+| Daniela Ruiz | Membresía Premium   | Tarjeta  | Andrea | $180  |
+
+---
+
+# 3. Pantalla de Caja / Pagos
+
+Crear una pantalla exclusiva para recepcionista y admin:
+
+## Tabla de pagos
+
+Columnas:
+
+* Fecha
+* Cliente
+* Concepto
+* Método de pago
+* Monto
+* Cajera
+* Estado
+
+Filtros:
+
+* Hoy
+* Esta semana
+* Este mes
+* Por cajera
+* Por método de pago
+* Por instructor
+
+## Resumen arriba
+
+Mostrar tarjetas:
+
+* Total vendido hoy
+* Total efectivo
+* Total tarjeta
+* Total Yappy
+* Total Stripe
+* Total pendiente
+
+---
+
+# 4. Relación entre pago y clase
+
+Cada reserva debe guardar:
+
+* Cliente
+* Clase
+* Instructor
+* Fecha
+* Hora
+* Estado de asistencia
+* Pago asociado
+
+Así el administrador puede entrar a una clase y ver:
+
+* Quién asistió
+* Quién pagó
+* Cómo pagó
+* Quién cobró
+* Qué instructor dio la clase
+
+Ejemplo:
+
+Clase: Reformer Intermedio — 6:00 PM
+Instructor: Carla
+
+| Alumno      | Pagó | Método  | Cajera | Asistió |
+| ----------- | ---- | ------- | ------ | ------- |
+| Ana Pérez   | Sí   | Yappy   | María  | Sí      |
+| Laura Gómez | Sí   | Tarjeta | Sofía  | No      |
+
+---
+
+# 5. Vista del Instructor
+
+Pantalla simple tipo agenda:
+
+* Hoy
+
+  * 8:00 AM Reformer Básico
+  * 5 alumnas
+* 10:00 AM Reformer Intermedio
+
+  * 8 alumnas
+
+Al entrar en una clase:
+
+* Lista de alumnos
+* Botón “Asistió / No asistió”
+* Notas
+* Observaciones
+
+Ejemplo:
+
+* Ana Pérez — Asistió
+* Marta López — Llegó tarde
+* Sara Díaz — Primera clase
+
+---
+
+# 6. Dashboard Admin Profesional
+
+Tarjetas principales:
+
+* Ventas del día
+* Clientes activos
+* Clases hoy
+* Ocupación promedio
+* Membresías por vencer
+* Pagos pendientes
+
+Gráficas:
+
+* Ingresos por método de pago
+* Clases más reservadas
+* Instructor con más alumnos
+* Horarios más ocupados
+* Clientes más frecuentes
+
+---
+
+# 7. Base de datos sugerida
+
+## Tabla users
+
+* id
+* nombre
+* email
+* telefono
+* password
+* role
+
+  * admin
+  * receptionist
+  * instructor
+  * client
+
+## Tabla payments
+
+* id
+* client_id
+* cashier_id
+* reservation_id
+* amount
+* method
+* status
+* created_at
+
+## Tabla reservations
+
+* id
+* client_id
+* class_id
+* instructor_id
+* attended
+* payment_id
+
+## Tabla memberships
+
+* id
+* client_id
+* plan
+* remaining_classes
+* expires_at
+
+## Tabla class_sessions
+
+* id
+* class_name
+* instructor_id
+* start_time
+* end_time
+* max_capacity
