@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { db, studiosTable, usersTable, instructorsTable, classesTable } from "@workspace/db";
+import { sql, notInArray } from "drizzle-orm";
 import { logger } from "./lib/logger";
 
 const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -14,15 +15,9 @@ function getNextDayDate(dayIndex: number): string {
   return next.toISOString().split("T")[0]!;
 }
 
-const CLASS_TYPES = ["Matwork", "Reformer", "Barre", "Stretching", "Core"];
-const CLASS_LEVELS = ["Básico", "Intermedio", "Avanzado"];
-const CLASS_NAMES = [
-  "Pilates Matwork",
-  "Pilates Reformer",
-  "Barre Fitness",
-  "Stretching & Flexibility",
-  "Core Strength",
-];
+const VALID_TYPES = ["Reformer", "Mat", "Privada"] as const;
+const VALID_LEVELS = ["Principiante", "Intermedio", "Avanzado"] as const;
+const CLASS_NAMES = ["Pilates Reformer", "Pilates Mat", "Clase Privada"];
 
 export async function seedDatabase(): Promise<void> {
   try {
@@ -101,7 +96,7 @@ export async function seedDatabase(): Promise<void> {
           name: "María González",
           email: "maria@moonpilates.com",
           phone: "+507 6586-9949",
-          specialties: ["Matwork", "Reformer", "Barre"],
+          specialties: ["Reformer", "Mat", "Privada"],
         })
         .returning({ id: instructorsTable.id });
       instructorId = instructor!.id;
@@ -111,7 +106,26 @@ export async function seedDatabase(): Promise<void> {
       logger.info({ instructorId }, "seed: instructor already exists");
     }
 
-    // 4. Base classes
+    // 4. Fix invalid class data (migration for previously seeded bad data)
+    const fixedLevels = await db
+      .update(classesTable)
+      .set({ level: "Principiante" })
+      .where(notInArray(classesTable.level, [...VALID_LEVELS]))
+      .returning({ id: classesTable.id });
+    if (fixedLevels.length > 0) {
+      logger.info({ count: fixedLevels.length }, "seed: fixed invalid class levels");
+    }
+
+    const fixedTypes = await db
+      .update(classesTable)
+      .set({ type: "Reformer" })
+      .where(notInArray(classesTable.type, [...VALID_TYPES]))
+      .returning({ id: classesTable.id });
+    if (fixedTypes.length > 0) {
+      logger.info({ count: fixedTypes.length }, "seed: fixed invalid class types");
+    }
+
+    // 5. Base classes (only if none exist)
     const existingClasses = await db.select().from(classesTable).limit(1);
 
     if (existingClasses.length === 0) {
@@ -133,15 +147,15 @@ export async function seedDatabase(): Promise<void> {
         const dayName = DAY_NAMES[dayIndex]!;
         const dateStr = getNextDayDate(dayIndex);
         for (let i = 0; i < weekDaySlots.length; i++) {
-          const ti = i % CLASS_TYPES.length;
+          const ti = i % VALID_TYPES.length;
           rows.push({
             name: CLASS_NAMES[ti]!,
             instructorId,
             time: weekDaySlots[i]!,
             duration: 60,
             capacity: 6,
-            level: CLASS_LEVELS[i % CLASS_LEVELS.length]!,
-            type: CLASS_TYPES[ti]!,
+            level: VALID_LEVELS[i % VALID_LEVELS.length]!,
+            type: VALID_TYPES[ti]!,
             status: "Activa",
             dayOfWeek: dayName,
             date: dateStr,
@@ -152,15 +166,15 @@ export async function seedDatabase(): Promise<void> {
       // Saturday
       const satDate = getNextDayDate(6);
       for (let i = 0; i < satSlots.length; i++) {
-        const ti = i % CLASS_TYPES.length;
+        const ti = i % VALID_TYPES.length;
         rows.push({
           name: CLASS_NAMES[ti]!,
           instructorId,
           time: satSlots[i]!,
           duration: 60,
           capacity: 6,
-          level: CLASS_LEVELS[i % CLASS_LEVELS.length]!,
-          type: CLASS_TYPES[ti]!,
+          level: VALID_LEVELS[i % VALID_LEVELS.length]!,
+          type: VALID_TYPES[ti]!,
           status: "Activa",
           dayOfWeek: "Sábado",
           date: satDate,

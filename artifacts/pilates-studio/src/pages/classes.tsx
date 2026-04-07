@@ -107,6 +107,7 @@ export default function Classes() {
   const { user } = useAuth();
 
   const isAdmin = user?.role === "ADMIN";
+  const canManage = user?.role === "ADMIN" || user?.role === "RECEPTIONIST";
   const weekDates = getWeekDates(weekOffset);
 
   const getClass = (dayName: string, time: string) =>
@@ -199,6 +200,7 @@ export default function Classes() {
                           slotLabel={slot.label}
                           slotEnd={slot.end}
                           isAdmin={isAdmin}
+                          canManage={canManage}
                           onSelect={(s) => setSelected(s)}
                         />
                       </td>
@@ -228,6 +230,7 @@ function SlotCell({
   slotLabel,
   slotEnd,
   isAdmin,
+  canManage,
   onSelect,
 }: {
   cls: PilatesClass | null;
@@ -237,6 +240,7 @@ function SlotCell({
   slotLabel: string;
   slotEnd: string;
   isAdmin: boolean;
+  canManage: boolean;
   onSelect: (s: SelectedSlot) => void;
 }) {
   const isFull = cls ? cls.enrolled >= cls.capacity : false;
@@ -244,11 +248,11 @@ function SlotCell({
   if (!cls) {
     return (
       <button
-        onClick={() => isAdmin && onSelect({ dayName, date, time, cls: null })}
+        onClick={() => canManage && onSelect({ dayName, date, time, cls: null })}
         className={`w-full min-h-[72px] rounded-lg border border-dashed border-border/30 bg-muted/10 flex items-center justify-center transition-all
-          ${isAdmin ? "hover:border-primary/30 hover:bg-primary/5 cursor-pointer group" : "cursor-default opacity-40"}`}
+          ${canManage ? "hover:border-primary/30 hover:bg-primary/5 cursor-pointer group" : "cursor-default opacity-40"}`}
       >
-        {isAdmin && (
+        {canManage && (
           <Plus className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary/60 transition-colors" />
         )}
       </button>

@@ -59,7 +59,7 @@ router.get("/classes", async (_req, res): Promise<void> => {
     .orderBy(classesTable.time);
 
   const mapped = rows.map((r) => ({ ...r, instructor: r.instructor ?? "Sin instructor" }));
-  res.json(ListClassesResponse.parse(mapped));
+  res.json(mapped);
 });
 
 router.post("/classes", async (req, res): Promise<void> => {
