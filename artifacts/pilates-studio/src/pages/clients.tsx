@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { 
   useListClients, 
   useCreateClient, 
@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Mail, Phone, CalendarCheck, FileText, Trash2, X } from "lucide-react";
+import { Plus, Search, Mail, Phone, CalendarCheck, FileText, Trash2, CreditCard } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,9 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MembershipStatusCard, ClientMembership, computeMembershipStatus } from "@/components/membership-status-card";
+
+const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates-studio$/, "") + "/api";
 
 export default function Clients() {
   const { data: clients, isLoading } = useListClients();
@@ -137,11 +140,39 @@ export default function Clients() {
   );
 }
 
+function useMembershipByClient(clientId: number, enabled: boolean) {
+  const [membership, setMembership] = useState<ClientMembership | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+
+  const fetch_ = useCallback(async () => {
+    if (!enabled) return;
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await fetch(`${API_BASE}/clients/${clientId}/membership`);
+      if (res.status === 404) { setMembership(null); return; }
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setMembership(data as ClientMembership);
+    } catch { setError(true); }
+    finally { setLoading(false); }
+  }, [clientId, enabled]);
+
+  useEffect(() => { fetch_(); }, [fetch_]);
+  return { membership, loading, error, refetch: fetch_ };
+}
+
 function ClientDetailsPanel({ client, open, onOpenChange }: { client: Client, open: boolean, onOpenChange: (open: boolean) => void }) {
   const { data: attendance, isLoading } = useGetClientAttendance(client.id, { query: { enabled: open } });
+  const { membership, loading: membershipLoading } = useMembershipByClient(client.id, open);
   const deleteMutation = useDeleteClient();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const membershipComputedStatus = membership
+    ? computeMembershipStatus(membership)
+    : null;
 
   const handleDelete = () => {
     if (confirm("¿Estás seguro de eliminar este cliente? Esta acción no se puede deshacer.")) {
@@ -162,37 +193,81 @@ function ClientDetailsPanel({ client, open, onOpenChange }: { client: Client, op
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md p-0 flex flex-col">
         <div className="p-6 bg-muted/30 border-b border-border/50">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-2xl shrink-0">
-                {client.name.charAt(0)}
-              </div>
-              <div>
-                <SheetTitle className="text-2xl">{client.name}</SheetTitle>
-                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                  <span>Miembro desde {new Date(client.createdAt).toLocaleDateString()}</span>
-                </div>
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-2xl shrink-0">
+              {client.name.charAt(0)}
+            </div>
+            <div>
+              <SheetTitle className="text-2xl">{client.name}</SheetTitle>
+              <div className="text-sm text-muted-foreground mt-1">
+                Miembro desde {new Date(client.createdAt).toLocaleDateString("es-PA")}
               </div>
             </div>
           </div>
           
-          <div className="flex gap-2 mt-6">
+          <div className="flex gap-2 mt-4 flex-wrap">
             <Badge variant="secondary" className="bg-primary/10 text-primary px-3 py-1 text-sm font-medium">
               Plan {client.plan}
             </Badge>
-            <Badge variant="outline" className="px-3 py-1 text-sm font-medium">
-              {client.classesRemaining} clases restantes
-            </Badge>
+            {membershipComputedStatus && (
+              <Badge
+                className={`px-3 py-1 text-sm font-medium border ${
+                  membershipComputedStatus === "active"
+                    ? "bg-green-100 text-green-700 border-green-200"
+                    : membershipComputedStatus === "expired"
+                    ? "bg-red-100 text-red-700 border-red-200"
+                    : "bg-gray-100 text-gray-600 border-gray-200"
+                }`}
+              >
+                {membershipComputedStatus === "active" ? "Activa" : membershipComputedStatus === "expired" ? "Vencida" : "Completada"}
+              </Badge>
+            )}
           </div>
         </div>
 
-        <Tabs defaultValue="info" className="flex-1 flex flex-col">
+        <Tabs defaultValue="membership" className="flex-1 flex flex-col">
           <TabsList className="w-full justify-start rounded-none border-b border-border/50 bg-transparent px-6 py-0 h-12">
+            <TabsTrigger value="membership" className="h-12 rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">
+              <CreditCard className="h-3.5 w-3.5 mr-1.5" />
+              Membresía
+            </TabsTrigger>
             <TabsTrigger value="info" className="h-12 rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Información</TabsTrigger>
             <TabsTrigger value="attendance" className="h-12 rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Asistencia</TabsTrigger>
           </TabsList>
           
           <div className="flex-1 overflow-auto p-6">
+            <TabsContent value="membership" className="m-0 space-y-4">
+              {membershipLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-32 w-full rounded-xl" />
+                </div>
+              ) : membership ? (
+                <>
+                  <MembershipStatusCard
+                    membership={membership}
+                    onBuyNewPlan={() => toast({ title: "Ir a Cobros para registrar un nuevo plan." })}
+                  />
+                  <div className="text-xs text-muted-foreground text-center">
+                    Membresía más reciente. Para ver el historial completo, revisa la sección de Cobros.
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-xl border border-dashed">
+                  <CreditCard className="h-8 w-8 mx-auto mb-3 opacity-20" />
+                  <p className="font-medium">Sin membresía activa</p>
+                  <p className="text-sm mt-1">Este cliente no tiene membresías registradas.</p>
+                  <p className="text-xs mt-3 text-primary">Ve a Cobros para asignar un plan.</p>
+                </div>
+              )}
+
+              {/* Simple classes remaining fallback */}
+              {!membership && client.classesRemaining > 0 && (
+                <div className="p-4 rounded-xl border bg-blue-50/50 border-blue-200 text-sm text-blue-700">
+                  <span className="font-bold">{client.classesRemaining}</span> clases sueltas disponibles (saldo anterior).
+                </div>
+              )}
+            </TabsContent>
+
             <TabsContent value="info" className="m-0 space-y-8">
               <div className="space-y-4">
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Contacto</h3>
@@ -211,7 +286,7 @@ function ClientDetailsPanel({ client, open, onOpenChange }: { client: Client, op
               {client.notes && (
                 <div className="space-y-4">
                   <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Notas</h3>
-                  <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-sm text-yellow-900 dark:text-yellow-200">
+                  <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-sm text-yellow-900">
                     <div className="flex items-start gap-2">
                       <FileText className="h-4 w-4 mt-0.5 shrink-0" />
                       <p className="leading-relaxed">{client.notes}</p>

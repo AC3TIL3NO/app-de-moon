@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/select";
 import { useListClients, useListMemberships } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
+import { MembershipStatusCard, ClientMembership, computeMembershipStatus } from "@/components/membership-status-card";
 
 const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates-studio$/, "") + "/api";
 
@@ -106,9 +107,24 @@ function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) 
   const [paymentMethod, setPaymentMethod] = useState(() => paymentMethods[0] ?? "Efectivo");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [clientMembership, setClientMembership] = useState<ClientMembership | null>(null);
+  const [membershipLoading, setMembershipLoading] = useState(false);
 
   const selectedPlan = plans?.find(p => String(p.id) === planId);
   const selectedClient = clients?.find(c => String(c.id) === clientId);
+
+  useEffect(() => {
+    if (!clientId) { setClientMembership(null); return; }
+    const numId = Number(clientId);
+    if (!numId) return;
+    setMembershipLoading(true);
+    setClientMembership(null);
+    fetch(`${API_BASE}/clients/${numId}/membership`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => setClientMembership(data as ClientMembership | null))
+      .catch(() => setClientMembership(null))
+      .finally(() => setMembershipLoading(false));
+  }, [clientId]);
 
   async function handleCobrar() {
     if (!clientId || !planId) {
@@ -196,6 +212,26 @@ function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) 
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Membership status after client selection */}
+            {clientId && (
+              membershipLoading ? (
+                <div className="h-14 rounded-xl bg-muted/40 border border-border/30 animate-pulse" />
+              ) : clientMembership ? (
+                <div className="space-y-1">
+                  <MembershipStatusCard membership={clientMembership} compact />
+                  {computeMembershipStatus(clientMembership) === "active" && (
+                    <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+                      Este cliente ya tiene una membresía activa. Un nuevo cobro la reemplazará.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5 px-1">
+                  <span>Sin membresía registrada — se activará al cobrar.</span>
+                </p>
+              )
+            )}
 
             <div className="space-y-1.5">
               <Label>Plan de membresía</Label>

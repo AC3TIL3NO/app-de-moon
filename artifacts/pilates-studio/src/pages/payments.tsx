@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   DollarSign, CreditCard, Banknote, Smartphone, ArrowUpRight,
   Filter, RefreshCw, Pencil, Trash2, X, Save, PlusCircle,
@@ -7,6 +7,7 @@ import {
 import { useAuth } from "@/contexts/auth";
 import { useStudio } from "@/contexts/studio";
 import { useToast } from "@/hooks/use-toast";
+import { MembershipStatusCard, ClientMembership, computeMembershipStatus } from "@/components/membership-status-card";
 
 const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates-studio$/, "") + "/api";
 
@@ -108,6 +109,23 @@ function RegisterPaymentModal({ onClose, onSaved, currentUser }: RegisterPayment
   const [paymentMethod, setPaymentMethod] = useState(() => studioPaymentMethods[0] ?? "Efectivo");
   const [customAmount, setCustomAmount] = useState("");
   const [saving, setSaving] = useState(false);
+  const [clientMembership, setClientMembership] = useState<ClientMembership | null>(null);
+  const [membershipLoading, setMembershipLoading] = useState(false);
+
+  const fetchClientMembership = useCallback(async (clientId: number) => {
+    setMembershipLoading(true);
+    setClientMembership(null);
+    try {
+      const res = await fetch(`${API_BASE}/clients/${clientId}/membership`);
+      if (res.ok) setClientMembership(await res.json() as ClientMembership);
+    } catch {}
+    finally { setMembershipLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    if (selectedClient) fetchClientMembership(selectedClient.id);
+    else setClientMembership(null);
+  }, [selectedClient, fetchClientMembership]);
 
   useEffect(() => {
     const token = localStorage.getItem("pilates_token") ?? "";
@@ -247,14 +265,33 @@ function RegisterPaymentModal({ onClose, onSaved, currentUser }: RegisterPayment
               </div>
             )}
             {selectedClient && (
-              <div className="mt-2 flex items-center gap-2 p-2.5 bg-primary/5 rounded-lg border border-primary/20">
-                <div className="h-6 w-6 rounded-full bg-primary text-white text-xs flex items-center justify-center font-bold shrink-0">
-                  {selectedClient.name.charAt(0)}
+              <div className="mt-2 space-y-2">
+                <div className="flex items-center gap-2 p-2.5 bg-primary/5 rounded-lg border border-primary/20">
+                  <div className="h-6 w-6 rounded-full bg-primary text-white text-xs flex items-center justify-center font-bold shrink-0">
+                    {selectedClient.name.charAt(0)}
+                  </div>
+                  <span className="text-sm font-medium text-gray-900 flex-1">{selectedClient.name}</span>
+                  <button onClick={() => setSelectedClient(null)} className="text-gray-400 hover:text-gray-600">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <span className="text-sm font-medium text-gray-900 flex-1">{selectedClient.name}</span>
-                <button onClick={() => setSelectedClient(null)} className="text-gray-400 hover:text-gray-600">
-                  <X className="h-3.5 w-3.5" />
-                </button>
+                {membershipLoading && (
+                  <div className="h-16 rounded-xl bg-gray-50 border border-gray-100 animate-pulse" />
+                )}
+                {!membershipLoading && clientMembership && (
+                  <MembershipStatusCard membership={clientMembership} compact />
+                )}
+                {!membershipLoading && !clientMembership && (
+                  <div className="text-xs text-gray-400 px-1 flex items-center gap-1.5">
+                    <CreditCard className="h-3 w-3" />
+                    Sin membresía registrada — se activará al registrar este cobro.
+                  </div>
+                )}
+                {!membershipLoading && clientMembership && computeMembershipStatus(clientMembership) === "active" && (
+                  <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    Este cliente ya tiene una membresía activa. Registrar un nuevo plan la reemplazará.
+                  </div>
+                )}
               </div>
             )}
           </div>
