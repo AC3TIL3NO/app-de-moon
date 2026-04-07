@@ -5,6 +5,7 @@ import {
   Receipt, User, ChevronDown,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
+import { useStudio } from "@/contexts/studio";
 import { useToast } from "@/hooks/use-toast";
 
 const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates-studio$/, "") + "/api";
@@ -40,8 +41,10 @@ interface MembershipPlan {
   name: string;
   totalClasses: number;
   price: number;
+  promoPrice?: number | null;
   durationDays: number;
   active: boolean;
+  isPublic: boolean;
 }
 
 interface Client {
@@ -92,13 +95,17 @@ interface RegisterPaymentModalProps {
 
 function RegisterPaymentModal({ onClose, onSaved, currentUser }: RegisterPaymentModalProps) {
   const { toast } = useToast();
+  const { settings } = useStudio();
+  const studioPaymentMethods = settings?.paymentMethods?.length
+    ? settings.paymentMethods
+    : PAYMENT_METHODS;
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<MembershipPlan | null>(null);
   const [clientSearch, setClientSearch] = useState("");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [showClientList, setShowClientList] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("Efectivo");
+  const [paymentMethod, setPaymentMethod] = useState(() => studioPaymentMethods[0] ?? "Efectivo");
   const [customAmount, setCustomAmount] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -119,7 +126,8 @@ function RegisterPaymentModal({ onClose, onSaved, currentUser }: RegisterPayment
     c.email.toLowerCase().includes(clientSearch.toLowerCase())
   ).slice(0, 8);
 
-  const amount = customAmount ? parseFloat(customAmount) : (selectedPlan?.price ?? 0);
+  const effectivePlanPrice = selectedPlan ? (selectedPlan.promoPrice ?? selectedPlan.price) : 0;
+  const amount = customAmount ? parseFloat(customAmount) : effectivePlanPrice;
 
   const handleSave = async () => {
     if (!selectedClient) { toast({ title: "Selecciona un cliente.", variant: "destructive" }); return; }
@@ -189,8 +197,13 @@ function RegisterPaymentModal({ onClose, onSaved, currentUser }: RegisterPayment
                     <div className="font-semibold text-gray-900 text-sm">{plan.name}</div>
                     <div className="text-xs text-gray-500 mt-0.5">{plan.totalClasses} clases · {plan.durationDays} días · Sin ITBMS</div>
                   </div>
-                  <div className={`text-lg font-black ${selectedPlan?.id === plan.id ? "text-primary" : "text-gray-800"}`}>
-                    B/. {plan.price}
+                  <div className="text-right">
+                    <div className={`text-lg font-black ${selectedPlan?.id === plan.id ? "text-primary" : "text-gray-800"}`}>
+                      B/. {plan.promoPrice ?? plan.price}
+                    </div>
+                    {plan.promoPrice != null && (
+                      <div className="text-xs line-through text-gray-400">B/. {plan.price}</div>
+                    )}
                   </div>
                 </button>
               ))}
@@ -249,7 +262,7 @@ function RegisterPaymentModal({ onClose, onSaved, currentUser }: RegisterPayment
           {/* Amount */}
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-2 block">
-              Monto {selectedPlan ? `(Plan: B/. ${selectedPlan.price})` : "(Libre)"}
+              Monto {selectedPlan ? `(Plan: B/. ${selectedPlan.promoPrice ?? selectedPlan.price})` : "(Libre)"}
             </label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 font-medium">B/.</span>
@@ -257,14 +270,17 @@ function RegisterPaymentModal({ onClose, onSaved, currentUser }: RegisterPayment
                 type="number"
                 step="0.01"
                 min="0"
-                placeholder={selectedPlan ? selectedPlan.price.toString() : "0.00"}
+                placeholder={selectedPlan ? String(selectedPlan.promoPrice ?? selectedPlan.price) : "0.00"}
                 value={customAmount}
                 onChange={e => setCustomAmount(e.target.value)}
                 className="w-full h-10 pl-10 pr-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
             {selectedPlan && !customAmount && (
-              <p className="text-xs text-gray-500 mt-1">Se cobrará B/. {selectedPlan.price} por {selectedPlan.totalClasses} clases</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Se cobrará B/. {selectedPlan.promoPrice ?? selectedPlan.price} por {selectedPlan.totalClasses} {selectedPlan.totalClasses === 1 ? "clase" : "clases"}
+                {selectedPlan.promoPrice != null && ` (precio original B/. ${selectedPlan.price})`}
+              </p>
             )}
           </div>
 
@@ -272,7 +288,7 @@ function RegisterPaymentModal({ onClose, onSaved, currentUser }: RegisterPayment
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-2 block">Método de Pago</label>
             <div className="grid grid-cols-3 gap-2">
-              {PAYMENT_METHODS.map(m => (
+              {studioPaymentMethods.map(m => (
                 <button
                   key={m}
                   onClick={() => setPaymentMethod(m)}

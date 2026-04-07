@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useStudio } from "@/contexts/studio";
 import {
   Save, Building2, Palette, CreditCard, Plus, Trash2,
-  GripVertical, Image, Phone, Mail, MapPin, FileText,
+  GripVertical, Image, Phone, Mail, MapPin, FileText, Tag, Lock,
 } from "lucide-react";
 
 const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates-studio$/, "") + "/api";
@@ -414,6 +414,8 @@ export default function Settings() {
         </CardContent>
       </Card>
 
+      <InternalPlansCard />
+
       <div className="flex justify-end pb-8">
         <Button
           onClick={handleSave}
@@ -426,5 +428,223 @@ export default function Settings() {
         </Button>
       </div>
     </motion.div>
+  );
+}
+
+interface InternalPlan {
+  id: number;
+  name: string;
+  price: number;
+  promoPrice?: number | null;
+  totalClasses: number;
+  durationDays: number;
+  active: boolean;
+  isPublic: boolean;
+}
+
+function InternalPlansCard() {
+  const { toast } = useToast();
+  const [plans, setPlans] = useState<InternalPlan[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+  const [newPlan, setNewPlan] = useState({ name: "", price: "", promoPrice: "" });
+  const [adding, setAdding] = useState(false);
+  const [editingPromo, setEditingPromo] = useState<Record<number, string>>({});
+  const [savingPromo, setSavingPromo] = useState<number | null>(null);
+
+  const fetchPlans = useCallback(async () => {
+    setLoadingPlans(true);
+    try {
+      const res = await fetch(`${API_BASE}/memberships`);
+      if (res.ok) {
+        const all = await res.json() as InternalPlan[];
+        setPlans(all.filter(p => !p.isPublic && p.active));
+      }
+    } catch {}
+    finally { setLoadingPlans(false); }
+  }, []);
+
+  useEffect(() => { fetchPlans(); }, [fetchPlans]);
+
+  const token = () => localStorage.getItem("pilates_token") ?? "";
+
+  const addPlan = async () => {
+    if (!newPlan.name || !newPlan.price) return;
+    setAdding(true);
+    try {
+      const res = await fetch(`${API_BASE}/memberships`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({
+          name: newPlan.name,
+          totalClasses: 1,
+          price: Number(newPlan.price),
+          promoPrice: newPlan.promoPrice ? Number(newPlan.promoPrice) : null,
+          durationDays: 1,
+          active: true,
+          isPublic: false,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: `Plan "${newPlan.name}" creado correctamente.` });
+      setNewPlan({ name: "", price: "", promoPrice: "" });
+      fetchPlans();
+    } catch {
+      toast({ title: "Error al crear el plan.", variant: "destructive" });
+    } finally { setAdding(false); }
+  };
+
+  const savePromo = async (planId: number) => {
+    setSavingPromo(planId);
+    const promoVal = editingPromo[planId];
+    try {
+      const res = await fetch(`${API_BASE}/memberships/${planId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ promoPrice: promoVal !== "" && promoVal !== undefined ? Number(promoVal) : null }),
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: "Precio de promo actualizado." });
+      setEditingPromo(prev => { const n = { ...prev }; delete n[planId]; return n; });
+      fetchPlans();
+    } catch {
+      toast({ title: "Error al guardar la promo.", variant: "destructive" });
+    } finally { setSavingPromo(null); }
+  };
+
+  const removePlan = async (planId: number) => {
+    try {
+      const res = await fetch(`${API_BASE}/memberships/${planId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ active: false }),
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: "Plan desactivado." });
+      fetchPlans();
+    } catch {
+      toast({ title: "Error al eliminar el plan.", variant: "destructive" });
+    }
+  };
+
+  return (
+    <Card className="shadow-sm border-border/50">
+      <CardHeader className="flex flex-row items-center gap-3 pb-4">
+        <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+          <Lock className="h-5 w-5 text-amber-500" />
+        </div>
+        <div>
+          <CardTitle className="text-base">Planes por Sesión (Internos)</CardTitle>
+          <CardDescription>Clases individuales y privadas. No visibles al público, solo en cobros.</CardDescription>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {loadingPlans ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {plans.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-3">No hay planes internos activos.</p>
+            )}
+            {plans.map(plan => {
+              const isEditingPromo = editingPromo[plan.id] !== undefined;
+              const promoVal = isEditingPromo ? editingPromo[plan.id] : (plan.promoPrice != null ? String(plan.promoPrice) : "");
+              return (
+                <div
+                  key={plan.id}
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl border border-amber-100 bg-amber-50/30 group"
+                >
+                  <Lock className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-foreground">{plan.name}</span>
+                      <span className="text-xs text-muted-foreground">B/. {plan.price}</span>
+                      {plan.promoPrice != null && (
+                        <span className="text-xs font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">
+                          Promo: B/. {plan.promoPrice}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="Promo B/."
+                        className="h-8 w-24 rounded-lg text-xs"
+                        value={promoVal}
+                        onChange={e => setEditingPromo(prev => ({ ...prev, [plan.id]: e.target.value }))}
+                      />
+                      {isEditingPromo && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-2 rounded-lg text-xs gap-1"
+                          onClick={() => savePromo(plan.id)}
+                          disabled={savingPromo === plan.id}
+                        >
+                          <Save className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => removePlan(plan.id)}
+                      className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                      title="Desactivar plan"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="border-t border-border/40 pt-4">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-1.5">
+            <Plus className="h-3.5 w-3.5" /> Agregar nuevo plan
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            <Input
+              placeholder="Nombre (ej: Clase Semiprivada)"
+              className="rounded-xl flex-1 min-w-[160px]"
+              value={newPlan.name}
+              onChange={e => setNewPlan(p => ({ ...p, name: e.target.value }))}
+            />
+            <Input
+              type="number"
+              min={0}
+              placeholder="Precio B/."
+              className="rounded-xl w-28"
+              value={newPlan.price}
+              onChange={e => setNewPlan(p => ({ ...p, price: e.target.value }))}
+            />
+            <Input
+              type="number"
+              min={0}
+              placeholder="Promo B/. (opc.)"
+              className="rounded-xl w-32"
+              value={newPlan.promoPrice}
+              onChange={e => setNewPlan(p => ({ ...p, promoPrice: e.target.value }))}
+            />
+            <Button
+              onClick={addPlan}
+              disabled={adding || !newPlan.name || !newPlan.price}
+              className="rounded-xl gap-1.5 shrink-0"
+            >
+              <Plus className="h-4 w-4" />
+              {adding ? "Creando..." : "Agregar"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+            <Tag className="h-3 w-3" />
+            El precio promo es opcional. Si se activa, los cobros se registran al precio promocional.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

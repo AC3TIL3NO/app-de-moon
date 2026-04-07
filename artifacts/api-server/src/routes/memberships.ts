@@ -14,17 +14,23 @@ const router: IRouter = Router();
 
 // --- Membership Plans ---
 
-router.get("/memberships", async (_req, res): Promise<void> => {
-  const plans = await db.select().from(membershipsTable).orderBy(membershipsTable.createdAt);
-  res.json(ListMembershipsResponse.parse(plans.map((p) => ({
+function serializePlan(p: typeof membershipsTable.$inferSelect) {
+  return {
     id: p.id,
     name: p.name,
     description: p.description ?? undefined,
     totalClasses: p.totalClasses,
     price: p.price,
+    promoPrice: p.promoPrice ?? undefined,
     durationDays: p.durationDays,
     active: p.active,
-  }))));
+    isPublic: p.isPublic,
+  };
+}
+
+router.get("/memberships", async (_req, res): Promise<void> => {
+  const plans = await db.select().from(membershipsTable).orderBy(membershipsTable.createdAt);
+  res.json(ListMembershipsResponse.parse(plans.map(serializePlan)));
 });
 
 router.post("/memberships", async (req, res): Promise<void> => {
@@ -38,34 +44,30 @@ router.post("/memberships", async (req, res): Promise<void> => {
     description: parsed.data.description,
     totalClasses: parsed.data.totalClasses,
     price: parsed.data.price,
+    promoPrice: parsed.data.promoPrice ?? null,
     durationDays: parsed.data.durationDays,
     active: parsed.data.active ?? true,
+    isPublic: parsed.data.isPublic ?? true,
   }).returning();
-  res.status(201).json({
-    id: plan.id,
-    name: plan.name,
-    description: plan.description ?? undefined,
-    totalClasses: plan.totalClasses,
-    price: plan.price,
-    durationDays: plan.durationDays,
-    active: plan.active,
-  });
+  res.status(201).json(serializePlan(plan!));
 });
 
 router.patch("/memberships/:id", async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
-  const { name, description, totalClasses, price, durationDays, active } = req.body as Record<string, unknown>;
+  const { name, description, totalClasses, price, promoPrice, durationDays, active, isPublic } = req.body as Record<string, unknown>;
   const updates: Record<string, unknown> = {};
   if (typeof name === "string" && name) updates.name = name;
   if (typeof description === "string") updates.description = description;
   if (typeof totalClasses === "number") updates.totalClasses = totalClasses;
   if (typeof price === "number") updates.price = price;
+  if (promoPrice !== undefined) updates.promoPrice = typeof promoPrice === "number" ? promoPrice : null;
   if (typeof durationDays === "number") updates.durationDays = durationDays;
   if (typeof active === "boolean") updates.active = active;
-  const [plan] = await db.update(membershipsTable).set(updates).where(eq(membershipsTable.id, id)).returning();
+  if (typeof isPublic === "boolean") updates.isPublic = isPublic;
+  const [plan] = await db.update(membershipsTable).set(updates as any).where(eq(membershipsTable.id, id)).returning();
   if (!plan) { res.status(404).json({ error: "Not found" }); return; }
-  res.json({ id: plan.id, name: plan.name, description: plan.description ?? undefined, totalClasses: plan.totalClasses, price: plan.price, durationDays: plan.durationDays, active: plan.active });
+  res.json(serializePlan(plan));
 });
 
 router.delete("/memberships/:id", async (req, res): Promise<void> => {

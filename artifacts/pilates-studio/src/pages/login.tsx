@@ -5,11 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
+import { useStudio } from "@/contexts/studio";
 import loginBg from "@/assets/login-bg.jpg";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { login, isLoading } = useAuth();
+  const { settings } = useStudio();
+  const studioName = settings?.name ?? "Moon Pilates Studio";
+  const logoInitial = studioName.charAt(0).toUpperCase();
   const [email, setEmail] = useState("admin@studio.com");
   const [password, setPassword] = useState("admin123");
   const [showPw, setShowPw] = useState(false);
@@ -31,10 +35,14 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center p-8 lg:p-12">
         <div className="w-full max-w-[400px] space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-              <span className="font-semibold text-xl">P</span>
-            </div>
-            <span className="text-2xl font-semibold tracking-tight text-foreground">Pilates Studio</span>
+            {settings?.logoUrl ? (
+              <img src={settings.logoUrl} alt={studioName} className="h-12 w-12 rounded-2xl object-cover shadow-sm" />
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+                <span className="font-semibold text-xl">{logoInitial}</span>
+              </div>
+            )}
+            <span className="text-2xl font-semibold tracking-tight text-foreground">{studioName}</span>
           </div>
 
           <div className="space-y-3">

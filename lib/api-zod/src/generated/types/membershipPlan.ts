@@ -12,6 +12,8 @@ export interface MembershipPlan {
   description?: string | null;
   totalClasses: number;
   price: number;
+  promoPrice?: number | null;
   durationDays: number;
   active: boolean;
+  isPublic: boolean;
 }

@@ -8,8 +8,10 @@ export const membershipsTable = pgTable("memberships", {
   description: text("description"),
   totalClasses: integer("total_classes").notNull(),
   price: integer("price").notNull(),
+  promoPrice: integer("promo_price"),
   durationDays: integer("duration_days").notNull(),
   active: boolean("active").notNull().default(true),
+  isPublic: boolean("is_public").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

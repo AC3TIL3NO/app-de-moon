@@ -125,7 +125,7 @@ function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) 
           clientId: Number(clientId),
           membershipId: Number(planId),
           concept: `Membresía ${selectedPlan?.name} — ${selectedClient?.name}`,
-          amount: selectedPlan?.price ?? 0,
+          amount: selectedPlan ? (selectedPlan.promoPrice ?? selectedPlan.price) : 0,
           paymentMethod,
           chargedBy: user?.name ?? "Recepción",
           activateMembership: true,
@@ -206,7 +206,8 @@ function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) 
                 <SelectContent>
                   {plans?.filter(p => p.active).map(p => (
                     <SelectItem key={p.id} value={String(p.id)}>
-                      {p.name} — B/. {p.price}
+                      {p.name} — B/. {p.promoPrice ?? p.price}
+                      {p.promoPrice != null ? ` (promo, orig. B/. ${p.price})` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>

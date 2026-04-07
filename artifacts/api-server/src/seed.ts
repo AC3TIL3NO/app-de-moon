@@ -63,6 +63,18 @@ export async function seedDatabase(): Promise<void> {
       logger.info({ studioId }, "seed: studio created");
     } else {
       studioId = existingStudios[0]!.id;
+      // Always keep core branding values up to date
+      await db
+        .update(studiosTable)
+        .set({
+          name: "Moon Pilates Studio",
+          primaryColor: "#7C3AED",
+          secondaryColor: "#A78BFA",
+          phone: "+507 6586-9949",
+          email: "moonpilatesstudiopty@gmail.com",
+          address: "Atrio Mall Costa del Este Piso 2 Local C-16, Panamá",
+        })
+        .where(eq(studiosTable.id, studioId));
       logger.info({ studioId }, "seed: studio already exists");
     }
 
@@ -123,32 +135,41 @@ export async function seedDatabase(): Promise<void> {
     }
 
     // ─── 4. Membership plans (always ensure correct plans exist) ─────────────
-    const REQUIRED_PLANS = [
-      { name: "Pilates Básico",   description: "4 clases al mes\nPrecios sin ITBMS\nClases de 60 minutos",                       totalClasses: 4,  price: 75,  durationDays: 30 },
-      { name: "Pilates Plus",     description: "8 clases al mes\nPrecios sin ITBMS\nClases de 60 minutos",                       totalClasses: 8,  price: 135, durationDays: 30 },
-      { name: "Pilates Premium",  description: "12 clases al mes\nPrecios sin ITBMS\nClases de 60 minutos\nAcceso prioritario",  totalClasses: 12, price: 180, durationDays: 30 },
+    const PUBLIC_PLANS = [
+      { name: "Pilates Básico",   description: "4 clases al mes\nPrecios sin ITBMS\nClases de 60 minutos",                       totalClasses: 4,  price: 75,  durationDays: 30, isPublic: true },
+      { name: "Pilates Plus",     description: "8 clases al mes\nPrecios sin ITBMS\nClases de 60 minutos",                       totalClasses: 8,  price: 135, durationDays: 30, isPublic: true },
+      { name: "Pilates Premium",  description: "12 clases al mes\nPrecios sin ITBMS\nClases de 60 minutos\nAcceso prioritario",  totalClasses: 12, price: 180, durationDays: 30, isPublic: true },
+    ];
+
+    const INTERNAL_PLANS = [
+      { name: "Clase Individual Grupal", description: "Clase grupal de pago por sesión", totalClasses: 1, price: 20, durationDays: 1, isPublic: false },
+      { name: "Clase Privada",           description: "Clase privada individual",         totalClasses: 1, price: 30, durationDays: 1, isPublic: false },
+      { name: "Clase Privada Dual",      description: "Clase privada para dos personas",  totalClasses: 1, price: 40, durationDays: 1, isPublic: false },
     ];
 
     const existingMemberships = await db.select().from(membershipsTable).orderBy(membershipsTable.id);
+    const existingNames = new Set(existingMemberships.map(m => m.name));
 
     if (existingMemberships.length === 0) {
-      await db.insert(membershipsTable).values(REQUIRED_PLANS.map(p => ({ ...p, active: true })));
-      logger.info("seed: membership plans created");
+      await db.insert(membershipsTable).values([...PUBLIC_PLANS, ...INTERNAL_PLANS].map(p => ({ ...p, active: true })));
+      logger.info("seed: all membership plans created");
     } else {
-      // Update existing plans to ensure correct names/prices (in order)
-      for (let i = 0; i < REQUIRED_PLANS.length; i++) {
-        const plan = REQUIRED_PLANS[i]!;
-        const existing = existingMemberships[i];
+      // Update existing public plans to ensure correct names/prices (in order by ID)
+      const publicExisting = existingMemberships.filter(m => m.isPublic !== false).slice(0, PUBLIC_PLANS.length);
+      for (let i = 0; i < PUBLIC_PLANS.length; i++) {
+        const plan = PUBLIC_PLANS[i]!;
+        const existing = publicExisting[i];
         if (existing && (existing.name !== plan.name || existing.price !== plan.price)) {
           await db.update(membershipsTable).set({ ...plan, active: true }).where(eq(membershipsTable.id, existing.id));
-          logger.info({ id: existing.id, name: plan.name }, "seed: updated membership plan");
+          logger.info({ id: existing.id, name: plan.name }, "seed: updated public membership plan");
         }
       }
-      // Create any missing plans beyond existing count
-      if (existingMemberships.length < REQUIRED_PLANS.length) {
-        const missing = REQUIRED_PLANS.slice(existingMemberships.length);
-        await db.insert(membershipsTable).values(missing.map(p => ({ ...p, active: true })));
-        logger.info({ count: missing.length }, "seed: created missing membership plans");
+      // Create any missing internal plans by name
+      for (const plan of INTERNAL_PLANS) {
+        if (!existingNames.has(plan.name)) {
+          await db.insert(membershipsTable).values({ ...plan, active: true });
+          logger.info({ name: plan.name }, "seed: created internal plan");
+        }
       }
     }
 

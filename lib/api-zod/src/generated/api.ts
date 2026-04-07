@@ -430,8 +430,10 @@ export const ListMembershipsResponseItem = zod.object({
   description: zod.string().nullish(),
   totalClasses: zod.number(),
   price: zod.number(),
+  promoPrice: zod.number().nullish(),
   durationDays: zod.number(),
   active: zod.boolean(),
+  isPublic: zod.boolean(),
 });
 export const ListMembershipsResponse = zod.array(ListMembershipsResponseItem);
 
@@ -443,8 +445,10 @@ export const CreateMembershipBody = zod.object({
   description: zod.string().optional(),
   totalClasses: zod.number(),
   price: zod.number(),
+  promoPrice: zod.number().nullish(),
   durationDays: zod.number(),
   active: zod.boolean(),
+  isPublic: zod.boolean().optional(),
 });
 
 /**
