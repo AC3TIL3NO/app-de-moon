@@ -17,14 +17,14 @@ import {
   Users,
   CalendarDays,
   CalendarClock,
-  UserSquare2,
   CreditCard,
   LogOut,
   BarChart3,
   Settings,
   ChevronRight,
   Receipt,
-  ClipboardCheck,
+  BadgeDollarSign,
+  CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -35,6 +35,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useListClients, useListMemberships } from "@workspace/api-client-react";
+import { useToast } from "@/hooks/use-toast";
+
+const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates-studio$/, "") + "/api";
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Administrador",
@@ -42,13 +61,18 @@ const ROLE_LABELS: Record<string, string> = {
   INSTRUCTOR: "Instructor",
 };
 
+const PAYMENT_METHODS = [
+  { value: "efectivo", label: "Efectivo" },
+  { value: "yappy", label: "Yappy" },
+  { value: "paypal", label: "PayPal" },
+  { value: "tarjeta", label: "Tarjeta" },
+];
+
 const ALL_NAV = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] },
   { name: "Clases", href: "/classes", icon: CalendarClock, roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] },
-  { name: "Asistencias", href: "/attendance", icon: ClipboardCheck, roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] },
   { name: "Clientes", href: "/clients", icon: Users, roles: ["ADMIN", "RECEPTIONIST"] },
   { name: "Calendario", href: "/calendar", icon: CalendarDays, roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] },
-  { name: "Instructores", href: "/instructors", icon: UserSquare2, roles: ["ADMIN"] },
   { name: "Membresías", href: "/memberships", icon: CreditCard, roles: ["ADMIN", "RECEPTIONIST"] },
   { name: "Caja / Pagos", href: "/payments", icon: Receipt, roles: ["ADMIN", "RECEPTIONIST"] },
   { name: "Reportes", href: "/reports", icon: BarChart3, roles: ["ADMIN"] },
@@ -58,10 +82,8 @@ const ALL_NAV = [
 const BREADCRUMB_MAP: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/classes": "Clases",
-  "/attendance": "Asistencias",
   "/clients": "Clientes",
   "/calendar": "Calendario",
-  "/instructors": "Instructores",
   "/memberships": "Membresías",
   "/payments": "Caja / Pagos",
   "/reports": "Reportes",
@@ -77,9 +99,163 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
+function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { data: clients } = useListClients();
+  const { data: plans } = useListMemberships();
+
+  const [clientId, setClientId] = useState("");
+  const [planId, setPlanId] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("efectivo");
+  const [saving, setSaving] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const selectedPlan = plans?.find(p => String(p.id) === planId);
+  const selectedClient = clients?.find(c => String(c.id) === clientId);
+
+  async function handleCobrar() {
+    if (!clientId || !planId) {
+      toast({ title: "Selecciona cliente y plan.", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const token = localStorage.getItem("pilates_token");
+      const res = await fetch(`${API_BASE}/payments/manual`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          clientId: Number(clientId),
+          membershipId: Number(planId),
+          concept: `Membresía ${selectedPlan?.name} — ${selectedClient?.name}`,
+          amount: selectedPlan?.price ?? 0,
+          paymentMethod,
+          chargedBy: user?.name ?? "Recepción",
+          activateMembership: true,
+        }),
+      });
+      if (!res.ok) throw new Error("Error al registrar cobro");
+      setDone(true);
+      toast({ title: "Cobro registrado correctamente." });
+    } catch {
+      toast({ title: "Error al registrar el cobro.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleClose() {
+    setClientId("");
+    setPlanId("");
+    setPaymentMethod("efectivo");
+    setDone(false);
+    onClose();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
+      <DialogContent className="sm:max-w-sm rounded-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <BadgeDollarSign className="h-5 w-5 text-primary" />
+            Registrar Cobro
+          </DialogTitle>
+        </DialogHeader>
+
+        {done ? (
+          <div className="py-8 flex flex-col items-center gap-3 text-center">
+            <div className="h-14 w-14 rounded-full bg-green-100 flex items-center justify-center">
+              <CheckCircle2 className="h-8 w-8 text-green-600" />
+            </div>
+            <p className="font-semibold text-foreground">Cobro registrado</p>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">{selectedClient?.name}</span> — {selectedPlan?.name}<br />
+              <span className="text-primary font-bold">B/. {selectedPlan?.price?.toFixed(2)}</span> · {PAYMENT_METHODS.find(m => m.value === paymentMethod)?.label}
+            </p>
+            <Button className="mt-2 w-full" onClick={handleClose}>Cerrar</Button>
+          </div>
+        ) : (
+          <div className="space-y-4 py-2">
+            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/40 border border-border/40">
+              <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
+                {getInitials(user?.name ?? "?")}
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Cajero/a</p>
+                <p className="text-sm font-semibold">{user?.name}</p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Cliente</Label>
+              <Select value={clientId} onValueChange={setClientId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar cliente…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients?.map(c => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Plan de membresía</Label>
+              <Select value={planId} onValueChange={setPlanId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar plan…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {plans?.filter(p => p.active).map(p => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name} — B/. {p.price}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Método de pago</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_METHODS.map(m => (
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedPlan && (
+              <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 text-center">
+                <p className="text-xs text-muted-foreground mb-0.5">Total a cobrar</p>
+                <p className="text-2xl font-black text-primary">B/. {selectedPlan.price?.toFixed(2)}</p>
+              </div>
+            )}
+
+            <Button
+              className="w-full"
+              onClick={handleCobrar}
+              disabled={saving || !clientId || !planId}
+            >
+              {saving ? "Registrando…" : "Registrar cobro"}
+            </Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
+  const [cobrosOpen, setCobrosOpen] = useState(false);
 
   const role = user?.role ?? "INSTRUCTOR";
   const navigation = ALL_NAV.filter(item => item.roles.includes(role));
@@ -158,6 +334,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               )}
             </nav>
 
+            {(role === "ADMIN" || role === "RECEPTIONIST") && (
+              <Button
+                size="sm"
+                className="gap-2 font-semibold"
+                onClick={() => setCobrosOpen(true)}
+              >
+                <BadgeDollarSign className="h-4 w-4" />
+                Cobros
+              </Button>
+            )}
+
             {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -204,6 +391,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </main>
         </div>
       </div>
+
+      <CobrosModal open={cobrosOpen} onClose={() => setCobrosOpen(false)} />
     </SidebarProvider>
   );
 }

@@ -242,6 +242,16 @@ function ClassCard({ cls, cfg }: { cls: { id: number; name: string; instructor: 
   );
 }
 
+const CLASS_TIME_SLOTS = [
+  "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00",
+];
+
+const TIME_LABELS: Record<string, string> = {
+  "10:00": "10:00 AM", "11:00": "11:00 AM", "12:00": "12:00 PM",
+  "13:00": "1:00 PM", "14:00": "2:00 PM", "15:00": "3:00 PM",
+  "16:00": "4:00 PM", "17:00": "5:00 PM", "18:00": "6:00 PM",
+};
+
 function CreateClassDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { data: instructors } = useListInstructors();
   const createMutation = useCreateClass();
@@ -251,7 +261,7 @@ function CreateClassDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const [formData, setFormData] = useState({
     name: "",
     instructorId: "",
-    time: "",
+    time: "10:00",
     duration: "60",
     capacity: "10",
     level: CreateClassBodyLevel.Principiante,
@@ -262,16 +272,12 @@ function CreateClassDialog({ open, onOpenChange }: { open: boolean; onOpenChange
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.instructorId) {
-      toast({ title: "Error", description: "Selecciona un instructor", variant: "destructive" });
-      return;
-    }
     createMutation.mutate(
       {
         data: {
           ...formData,
-          instructorId: parseInt(formData.instructorId),
-          duration: parseInt(formData.duration),
+          instructorId: formData.instructorId ? parseInt(formData.instructorId) : 0,
+          duration: 60,
           capacity: parseInt(formData.capacity),
         },
       },
@@ -283,7 +289,7 @@ function CreateClassDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           setFormData({
             name: "",
             instructorId: "",
-            time: "",
+            time: "10:00",
             duration: "60",
             capacity: "10",
             level: CreateClassBodyLevel.Principiante,
@@ -348,27 +354,23 @@ function CreateClassDialog({ open, onOpenChange }: { open: boolean; onOpenChange
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="time">Hora</Label>
-                <Input
-                  id="time"
-                  type="time"
-                  required
-                  value={formData.time}
-                  onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                  className="rounded-lg"
-                />
+                <Label>Hora de inicio</Label>
+                <Select value={formData.time} onValueChange={(v) => setFormData({ ...formData, time: v })}>
+                  <SelectTrigger className="rounded-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CLASS_TIME_SLOTS.map((t) => (
+                      <SelectItem key={t} value={t}>{TIME_LABELS[t]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="duration">Duración (min)</Label>
-                <Input
-                  id="duration"
-                  type="number"
-                  required
-                  min="15"
-                  value={formData.duration}
-                  onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                  className="rounded-lg"
-                />
+                <Label>Duración</Label>
+                <div className="flex h-10 items-center px-3 rounded-lg border border-input bg-muted/50 text-sm text-muted-foreground font-medium">
+                  60 minutos (fijo)
+                </div>
               </div>
             </div>
 
