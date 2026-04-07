@@ -25,6 +25,8 @@ import {
 import heroBg from "@assets/40b756_86a22044bf6b4d728b69b627f57b50ec~mv2_1775503320084.avif";
 import studioBg from "@assets/40b756_4f1dc1bd9ca941efa4af8c07e580dd1b~mv2_1775503621543.avif";
 import logoBlack from "@assets/Moon_Pilates_Studio_Logo_TEXTO_NEGRO_1775503679484.png";
+import studioVideo1 from "@assets/SaveClip.App_AQPAckGAJnE1YTcWTONhSiHHlu6nlJ_D6F5PKxkAx3PK0NqsY_1775523267244.mp4";
+import studioVideo2 from "@assets/SaveClip.App_AQPxkzPBIp53uUbHiaI0ROdTmasQyIvq6OrYuRNUFT4AmYBkf_1775523272265.mp4";
 import { useClientAuth } from "@/contexts/clientAuth";
 import { AuthModal } from "@/components/AuthModal";
 import { BookingModal } from "@/components/BookingModal";
@@ -704,6 +706,48 @@ export default function LandingPage() {
                     <ArrowRight className="h-3.5 w-3.5" />
                   </button>
                 </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* STUDIO VIDEOS */}
+      <section className="py-24 px-6 bg-gray-950 overflow-hidden">
+        <div className="max-w-5xl mx-auto">
+          <AnimatedSection className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 bg-white/10 text-white text-sm font-medium px-4 py-1.5 rounded-full mb-5">
+              Moon en acción
+            </div>
+            <h2 className="text-4xl sm:text-5xl font-bold tracking-tight text-white">
+              Vive la experiencia Moon
+            </h2>
+            <p className="mt-4 text-lg text-gray-400 max-w-lg mx-auto">
+              Así se siente entrenar con nosotros. Clases diseñadas para cada nivel.
+            </p>
+          </AnimatedSection>
+
+          <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
+            {[studioVideo1, studioVideo2].map((src, i) => (
+              <motion.div
+                key={i}
+                variants={fadeUp}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                custom={i}
+                className="relative w-full sm:w-72 md:w-80 rounded-3xl overflow-hidden shadow-2xl shadow-black/60 border border-white/10"
+                style={{ aspectRatio: "9/16" }}
+              >
+                <video
+                  src={src}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
               </motion.div>
             ))}
           </div>
