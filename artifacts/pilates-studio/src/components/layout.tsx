@@ -26,6 +26,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
+import { useStudio } from "@/contexts/studio";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,13 +61,6 @@ const ROLE_LABELS: Record<string, string> = {
   INSTRUCTOR: "Instructor",
 };
 
-const PAYMENT_METHODS = [
-  { value: "efectivo", label: "Efectivo" },
-  { value: "yappy", label: "Yappy" },
-  { value: "paypal", label: "PayPal" },
-  { value: "tarjeta", label: "Tarjeta" },
-];
-
 const ALL_NAV = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] },
   { name: "Clases", href: "/classes", icon: CalendarClock, roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] },
@@ -98,13 +92,18 @@ function getInitials(name: string): string {
 
 function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user } = useAuth();
+  const { settings } = useStudio();
   const { toast } = useToast();
   const { data: clients } = useListClients();
   const { data: plans } = useListMemberships();
 
+  const paymentMethods = settings?.paymentMethods ?? [
+    "Efectivo", "Yappy", "Visa", "Mastercard", "PayPal", "PagueloFacil", "Transferencia",
+  ];
+
   const [clientId, setClientId] = useState("");
   const [planId, setPlanId] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("efectivo");
+  const [paymentMethod, setPaymentMethod] = useState(() => paymentMethods[0] ?? "Efectivo");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -145,7 +144,7 @@ function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) 
   function handleClose() {
     setClientId("");
     setPlanId("");
-    setPaymentMethod("efectivo");
+    setPaymentMethod(paymentMethods[0] ?? "Efectivo");
     setDone(false);
     onClose();
   }
@@ -168,7 +167,7 @@ function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) 
             <p className="font-semibold text-foreground">Cobro registrado</p>
             <p className="text-sm text-muted-foreground">
               <span className="font-medium text-foreground">{selectedClient?.name}</span> — {selectedPlan?.name}<br />
-              <span className="text-primary font-bold">B/. {selectedPlan?.price?.toFixed(2)}</span> · {PAYMENT_METHODS.find(m => m.value === paymentMethod)?.label}
+              <span className="text-primary font-bold">B/. {selectedPlan?.price?.toFixed(2)}</span> · {paymentMethod}
             </p>
             <Button className="mt-2 w-full" onClick={handleClose}>Cerrar</Button>
           </div>
@@ -221,8 +220,8 @@ function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) 
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {PAYMENT_METHODS.map(m => (
-                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  {paymentMethods.map(m => (
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -252,11 +251,16 @@ function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
+  const { settings } = useStudio();
   const [cobrosOpen, setCobrosOpen] = useState(false);
 
   const role = user?.role ?? "INSTRUCTOR";
   const navigation = ALL_NAV.filter(item => item.roles.includes(role));
   const currentLabel = BREADCRUMB_MAP[location] ?? "";
+
+  const studioName = settings?.name ?? user?.studioName ?? "Pilates Studio";
+  const logoUrl = settings?.logoUrl;
+  const primaryColor = settings?.primaryColor ?? "#7C3AED";
 
   const handleLogout = () => {
     logout();
@@ -269,12 +273,33 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <Sidebar className="border-r border-border/50 bg-card">
           <SidebarHeader className="p-5">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shrink-0">
-                <span className="font-semibold text-lg">P</span>
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-xl shadow-sm shrink-0 overflow-hidden"
+                style={{ backgroundColor: logoUrl ? "transparent" : primaryColor }}
+              >
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt={studioName}
+                    className="h-full w-full object-cover rounded-xl"
+                    onError={e => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                      const parent = (e.target as HTMLElement).parentElement;
+                      if (parent) {
+                        parent.style.backgroundColor = primaryColor;
+                        parent.innerHTML = `<span style="color:white;font-weight:600;font-size:1.125rem">${studioName.charAt(0).toUpperCase()}</span>`;
+                      }
+                    }}
+                  />
+                ) : (
+                  <span className="font-semibold text-lg text-white">
+                    {studioName.charAt(0).toUpperCase()}
+                  </span>
+                )}
               </div>
               <div className="overflow-hidden">
                 <div className="text-base font-semibold tracking-tight truncate">
-                  {user?.studioName ?? "Pilates Studio"}
+                  {studioName}
                 </div>
                 <div className="text-xs text-muted-foreground truncate">
                   {ROLE_LABELS[role]}

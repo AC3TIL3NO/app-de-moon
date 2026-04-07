@@ -13,6 +13,7 @@ export const studiosTable = pgTable("studios", {
   email: text("email"),
   address: text("address"),
   cancellationPolicy: text("cancellation_policy"),
+  paymentMethods: text("payment_methods").default('["Efectivo","Yappy","Visa","Mastercard","PayPal","PagueloFacil","Transferencia"]'),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

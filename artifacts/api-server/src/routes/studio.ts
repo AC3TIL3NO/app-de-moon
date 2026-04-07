@@ -2,51 +2,47 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { studiosTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { requireAuth, requireRole } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
-router.get("/studio/settings", async (req, res): Promise<void> => {
-  const studioId = 1;
-  const studios = await db
-    .select()
-    .from(studiosTable)
-    .where(eq(studiosTable.id, studioId))
-    .limit(1);
+const DEFAULT_PAYMENT_METHODS = ["Efectivo", "Yappy", "Visa", "Mastercard", "PayPal", "PagueloFacil", "Transferencia"];
 
-  if (studios.length === 0) {
-    res.status(404).json({ error: "Estudio no encontrado" });
-    return;
-  }
+function parsePaymentMethods(raw: string | null | undefined): string[] {
+  if (!raw) return DEFAULT_PAYMENT_METHODS;
+  try { return JSON.parse(raw) as string[]; } catch { return DEFAULT_PAYMENT_METHODS; }
+}
 
-  res.json(studios[0]);
+router.get("/studio/settings", async (_req, res): Promise<void> => {
+  const [studio] = await db.select().from(studiosTable).where(eq(studiosTable.id, 1)).limit(1);
+  if (!studio) { res.status(404).json({ error: "Estudio no encontrado" }); return; }
+  res.json({
+    ...studio,
+    paymentMethods: parsePaymentMethods(studio.paymentMethods),
+  });
 });
 
-router.patch("/studio/settings", async (req, res): Promise<void> => {
-  const studioId = 1;
-  const { name, logoUrl, primaryColor, secondaryColor, phone, email, address, cancellationPolicy } =
-    req.body as Record<string, string | undefined>;
+router.patch("/studio/settings", requireAuth, requireRole("ADMIN"), async (req, res): Promise<void> => {
+  const { name, logoUrl, primaryColor, secondaryColor, phone, email, address, cancellationPolicy, paymentMethods } = req.body as Record<string, unknown>;
 
-  const updated = await db
-    .update(studiosTable)
-    .set({
-      ...(name && { name }),
-      ...(logoUrl !== undefined && { logoUrl }),
-      ...(primaryColor && { primaryColor }),
-      ...(secondaryColor && { secondaryColor }),
-      ...(phone !== undefined && { phone }),
-      ...(email !== undefined && { email }),
-      ...(address !== undefined && { address }),
-      ...(cancellationPolicy !== undefined && { cancellationPolicy }),
-    })
-    .where(eq(studiosTable.id, studioId))
-    .returning();
+  const updates: Record<string, unknown> = {};
+  if (typeof name === "string" && name) updates.name = name;
+  if (logoUrl !== undefined) updates.logoUrl = logoUrl || null;
+  if (typeof primaryColor === "string" && primaryColor) updates.primaryColor = primaryColor;
+  if (typeof secondaryColor === "string" && secondaryColor) updates.secondaryColor = secondaryColor;
+  if (phone !== undefined) updates.phone = phone || null;
+  if (email !== undefined) updates.email = email || null;
+  if (address !== undefined) updates.address = address || null;
+  if (cancellationPolicy !== undefined) updates.cancellationPolicy = cancellationPolicy || null;
+  if (Array.isArray(paymentMethods)) updates.paymentMethods = JSON.stringify(paymentMethods);
 
-  if (updated.length === 0) {
-    res.status(404).json({ error: "Estudio no encontrado" });
-    return;
-  }
+  const [updated] = await db.update(studiosTable).set(updates as any).where(eq(studiosTable.id, 1)).returning();
+  if (!updated) { res.status(404).json({ error: "Estudio no encontrado" }); return; }
 
-  res.json(updated[0]);
+  res.json({
+    ...updated,
+    paymentMethods: parsePaymentMethods(updated.paymentMethods),
+  });
 });
 
 export default router;
