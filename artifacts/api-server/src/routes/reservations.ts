@@ -21,6 +21,7 @@ router.get("/reservations", async (_req, res): Promise<void> => {
       className: classesTable.name,
       date: reservationsTable.date,
       status: reservationsTable.status,
+      attended: reservationsTable.attended,
     })
     .from(reservationsTable)
     .leftJoin(clientsTable, eq(reservationsTable.clientId, clientsTable.id))

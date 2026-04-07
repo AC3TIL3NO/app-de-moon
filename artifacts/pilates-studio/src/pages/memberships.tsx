@@ -6,6 +6,7 @@ import {
   useDeleteMembership,
   useListClientMemberships,
   useDeleteClientMembership,
+  type MembershipPlan,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -21,14 +23,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Trash2, Plus, Users, CheckCircle2 } from "lucide-react";
+import { Trash2, Plus, Users, CheckCircle2, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const PLAN_FEATURES: Record<string, string[]> = {
-  "Moon Start": ["8 clases mensuales", "Acceso a clases grupales", "Soporte por WhatsApp", "Seguimiento básico"],
-  "Moon Flow": ["12 clases mensuales", "Prioridad de reserva", "Seguimiento personalizado", "Acceso a privadas y grupales", "WhatsApp directo"],
-  "Moon Unlimited": ["Clases ilimitadas", "Reserva prioritaria", "Privadas y grupales", "Atención personalizada", "WhatsApp VIP", "Plan nutricional"],
-};
+const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates-studio$/, "") + "/api";
 
 const HIGHLIGHTED_PLAN = "Moon Flow";
 
@@ -180,6 +178,10 @@ function PlansGrid() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const { data: plans, isLoading } = useListMemberships();
+  const [editingPlan, setEditingPlan] = useState<MembershipPlan | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", description: "", totalClasses: 8, price: 0, durationDays: 30 });
+  const [saving, setSaving] = useState(false);
+
   const deleteMutation = useDeleteMembership({
     mutation: {
       onSuccess: () => {
@@ -189,6 +191,44 @@ function PlansGrid() {
       onError: () => toast({ title: "Error al eliminar.", variant: "destructive" }),
     },
   });
+
+  function openEdit(plan: MembershipPlan) {
+    setEditForm({
+      name: plan.name,
+      description: plan.description ?? "",
+      totalClasses: plan.totalClasses,
+      price: plan.price,
+      durationDays: plan.durationDays,
+    });
+    setEditingPlan(plan);
+  }
+
+  async function saveEdit() {
+    if (!editingPlan) return;
+    setSaving(true);
+    try {
+      const token = localStorage.getItem("pilates_token");
+      const res = await fetch(`${API_BASE}/memberships/${editingPlan.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          name: editForm.name,
+          description: editForm.description,
+          totalClasses: editForm.totalClasses,
+          price: editForm.price,
+          durationDays: editForm.durationDays,
+        }),
+      });
+      if (!res.ok) throw new Error("Error al guardar");
+      qc.invalidateQueries({ queryKey: ["/memberships"] });
+      setEditingPlan(null);
+      toast({ title: "Plan actualizado correctamente." });
+    } catch {
+      toast({ title: "Error al guardar el plan.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -207,91 +247,142 @@ function PlansGrid() {
   }
 
   return (
-    <div className="grid gap-5 md:grid-cols-3">
-      {plans.map((plan) => {
-        const isDark = plan.name === HIGHLIGHTED_PLAN;
-        const features = PLAN_FEATURES[plan.name] ?? [];
-        const classLabel = plan.totalClasses >= 999 ? "Ilimitadas" : `${plan.totalClasses} clases`;
+    <>
+      <div className="grid gap-5 md:grid-cols-3">
+        {plans.map((plan) => {
+          const isDark = plan.name === HIGHLIGHTED_PLAN;
+          const features = (plan.description ?? "").split("\n").filter(Boolean);
+          const classLabel = plan.totalClasses >= 999 ? "Ilimitadas" : `${plan.totalClasses} clases`;
 
-        return (
-          <div
-            key={plan.id}
-            className={`relative rounded-2xl p-6 flex flex-col border transition-shadow hover:shadow-lg ${
-              isDark
-                ? "bg-gray-900 text-white border-gray-800"
-                : "bg-white text-gray-900 border-gray-100"
-            }`}
-          >
-            {isDark && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <span className="bg-primary text-white text-xs font-bold px-3 py-1 rounded-full shadow">
-                  POPULAR
-                </span>
-              </div>
-            )}
-
-            <div className="mb-1">
-              <p className={`text-xs font-bold tracking-widest uppercase mb-1 ${isDark ? "text-violet-400" : "text-primary"}`}>
-                {plan.name}
-              </p>
-              <p className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                {classLabel} al mes
-              </p>
-            </div>
-
-            <div className="flex items-end gap-1 my-4">
-              <span className={`text-4xl font-black tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>
-                B/. {plan.price}
-              </span>
-              <span className={`pb-1 text-sm ${isDark ? "text-gray-400" : "text-gray-400"}`}>/mes</span>
-            </div>
-
-            {plan.description && (
-              <p className={`text-xs mb-4 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                {plan.description}
-              </p>
-            )}
-
-            <ul className="space-y-2 flex-1">
-              {features.map((feat) => (
-                <li key={feat} className="flex items-center gap-2">
-                  <span className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 ${isDark ? "bg-primary/30" : "bg-primary/10"}`}>
-                    <CheckCircle2 className={`h-3 w-3 ${isDark ? "text-white" : "text-primary"}`} />
+          return (
+            <div
+              key={plan.id}
+              className={`relative rounded-2xl p-6 flex flex-col border transition-shadow hover:shadow-lg ${
+                isDark
+                  ? "bg-gray-900 text-white border-gray-800"
+                  : "bg-white text-gray-900 border-gray-100"
+              }`}
+            >
+              {isDark && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="bg-primary text-white text-xs font-bold px-3 py-1 rounded-full shadow">
+                    POPULAR
                   </span>
-                  <span className={`text-sm ${isDark ? "text-gray-300" : "text-gray-700"}`}>{feat}</span>
-                </li>
-              ))}
-              {!features.length && (
-                <li className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                  {plan.durationDays} días de vigencia
-                </li>
+                </div>
               )}
-            </ul>
 
-            <div className="mt-5 flex items-center justify-between gap-2">
-              <Badge
-                variant="secondary"
-                className={plan.active
-                  ? (isDark ? "bg-white/10 text-white" : "bg-primary/10 text-primary")
-                  : "bg-muted text-muted-foreground"
-                }
-              >
-                {plan.active ? "Activo" : "Inactivo"}
-              </Badge>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-8 w-8 ${isDark ? "text-gray-400 hover:text-red-400 hover:bg-white/5" : "text-muted-foreground hover:text-destructive"}`}
-                onClick={() => deleteMutation.mutate({ id: plan.id })}
-                disabled={deleteMutation.isPending}
-              >
-                <Trash2 className="h-4 w-4" />
+              <div className="mb-1">
+                <p className={`text-xs font-bold tracking-widest uppercase mb-1 ${isDark ? "text-violet-400" : "text-primary"}`}>
+                  {plan.name}
+                </p>
+                <p className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                  {classLabel} al mes
+                </p>
+              </div>
+
+              <div className="flex items-end gap-1 my-4">
+                <span className={`text-4xl font-black tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>
+                  B/. {plan.price}
+                </span>
+                <span className={`pb-1 text-sm ${isDark ? "text-gray-400" : "text-gray-400"}`}>/mes</span>
+              </div>
+
+              <ul className="space-y-2 flex-1">
+                {features.length > 0 ? features.map((feat) => (
+                  <li key={feat} className="flex items-center gap-2">
+                    <span className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 ${isDark ? "bg-primary/30" : "bg-primary/10"}`}>
+                      <CheckCircle2 className={`h-3 w-3 ${isDark ? "text-white" : "text-primary"}`} />
+                    </span>
+                    <span className={`text-sm ${isDark ? "text-gray-300" : "text-gray-700"}`}>{feat}</span>
+                  </li>
+                )) : (
+                  <li className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                    {plan.durationDays} días de vigencia
+                  </li>
+                )}
+              </ul>
+
+              <div className="mt-5 flex items-center justify-between gap-2">
+                <Badge
+                  variant="secondary"
+                  className={plan.active
+                    ? (isDark ? "bg-white/10 text-white" : "bg-primary/10 text-primary")
+                    : "bg-muted text-muted-foreground"
+                  }
+                >
+                  {plan.active ? "Activo" : "Inactivo"}
+                </Badge>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-8 w-8 ${isDark ? "text-gray-400 hover:text-violet-300 hover:bg-white/5" : "text-muted-foreground hover:text-primary"}`}
+                    onClick={() => openEdit(plan)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-8 w-8 ${isDark ? "text-gray-400 hover:text-red-400 hover:bg-white/5" : "text-muted-foreground hover:text-destructive"}`}
+                    onClick={() => deleteMutation.mutate({ id: plan.id })}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Edit Modal */}
+      <Dialog open={!!editingPlan} onOpenChange={(o) => !o && setEditingPlan(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Plan</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Nombre del Plan</Label>
+              <Input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label>Clases</Label>
+                <Input type="number" min={1} value={editForm.totalClasses} onChange={(e) => setEditForm((f) => ({ ...f, totalClasses: Number(e.target.value) }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Precio (B/.)</Label>
+                <Input type="number" min={0} step="0.01" value={editForm.price} onChange={(e) => setEditForm((f) => ({ ...f, price: Number(e.target.value) }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Días</Label>
+                <Input type="number" min={1} value={editForm.durationDays} onChange={(e) => setEditForm((f) => ({ ...f, durationDays: Number(e.target.value) }))} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Características (una por línea)</Label>
+              <Textarea
+                rows={6}
+                placeholder={"8 clases mensuales\nAcceso a clases grupales\nSoporte por WhatsApp"}
+                value={editForm.description}
+                onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                className="resize-none font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">Cada línea aparece como una característica en el landing page.</p>
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => setEditingPlan(null)}>Cancelar</Button>
+              <Button onClick={saveEdit} disabled={!editForm.name || saving}>
+                {saving ? "Guardando..." : "Guardar cambios"}
               </Button>
             </div>
           </div>
-        );
-      })}
-    </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

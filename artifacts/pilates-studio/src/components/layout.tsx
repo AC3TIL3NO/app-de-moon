@@ -24,6 +24,7 @@ import {
   Settings,
   ChevronRight,
   Receipt,
+  ClipboardCheck,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -44,6 +45,7 @@ const ROLE_LABELS: Record<string, string> = {
 const ALL_NAV = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] },
   { name: "Clases", href: "/classes", icon: CalendarClock, roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] },
+  { name: "Asistencias", href: "/attendance", icon: ClipboardCheck, roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] },
   { name: "Clientes", href: "/clients", icon: Users, roles: ["ADMIN", "RECEPTIONIST"] },
   { name: "Calendario", href: "/calendar", icon: CalendarDays, roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] },
   { name: "Instructores", href: "/instructors", icon: UserSquare2, roles: ["ADMIN"] },
@@ -56,10 +58,12 @@ const ALL_NAV = [
 const BREADCRUMB_MAP: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/classes": "Clases",
+  "/attendance": "Asistencias",
   "/clients": "Clientes",
   "/calendar": "Calendario",
   "/instructors": "Instructores",
   "/memberships": "Membresías",
+  "/payments": "Caja / Pagos",
   "/reports": "Reportes",
   "/settings": "Configuración",
 };

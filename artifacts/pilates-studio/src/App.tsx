@@ -14,6 +14,7 @@ import Memberships from "@/pages/memberships";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import Payments from "@/pages/payments";
+import Attendance from "@/pages/attendance";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +44,7 @@ function Router() {
             <Switch>
               <Route path="/dashboard" component={Dashboard} />
               <Route path="/classes" component={Classes} />
+              <Route path="/attendance" component={Attendance} />
               <Route path="/clients" component={Clients} />
               <Route path="/calendar" component={Calendar} />
               <Route path="/instructors" component={Instructors} />

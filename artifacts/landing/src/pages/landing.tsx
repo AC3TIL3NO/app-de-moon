@@ -125,38 +125,42 @@ const CLASSES = [
   },
 ];
 
-const MEMBERSHIPS = [
-  {
-    name: "Moon Start",
-    subtitle: "8 clases al mes",
-    price: "B/.120",
-    numericPrice: 120,
-    ideal: "Ideal para 2 clases por semana",
-    features: ["8 clases mensuales", "Acceso a clases grupales", "Soporte por WhatsApp", "Seguimiento básico"],
-    highlight: false,
+interface ApiPlan {
+  id: number;
+  name: string;
+  description?: string;
+  price: number;
+  totalClasses: number;
+  durationDays: number;
+  active: boolean;
+}
+
+interface PlanCard {
+  id: number;
+  name: string;
+  subtitle: string;
+  price: string;
+  numericPrice: number;
+  ideal: string;
+  features: string[];
+  highlight: boolean;
+  cta: string;
+}
+
+function apiPlanToCard(p: ApiPlan): PlanCard {
+  const unlimited = p.totalClasses >= 999;
+  return {
+    id: p.id,
+    name: p.name,
+    subtitle: unlimited ? "Clases ilimitadas" : `${p.totalClasses} clases al mes`,
+    price: `B/.${p.price}`,
+    numericPrice: p.price,
+    ideal: unlimited ? "Incluye prioridad de reserva" : `Ideal para ${p.totalClasses <= 8 ? "2 clases por semana" : "progreso constante"}`,
+    features: (p.description ?? "").split("\n").filter(Boolean),
+    highlight: p.name === "Moon Flow",
     cta: "Comprar paquete",
-  },
-  {
-    name: "Moon Flow",
-    subtitle: "12 clases al mes",
-    price: "B/.160",
-    numericPrice: 160,
-    ideal: "Ideal para progreso constante",
-    features: ["12 clases mensuales", "Prioridad de reserva", "Seguimiento personalizado", "Acceso a privadas y grupales", "WhatsApp directo"],
-    highlight: true,
-    cta: "Comprar paquete",
-  },
-  {
-    name: "Moon Unlimited",
-    subtitle: "Clases ilimitadas",
-    price: "B/.220",
-    numericPrice: 220,
-    ideal: "Incluye prioridad de reserva",
-    features: ["Clases ilimitadas", "Reserva prioritaria", "Privadas y grupales", "Atención personalizada", "WhatsApp VIP", "Plan nutricional"],
-    highlight: false,
-    cta: "Comprar paquete",
-  },
-];
+  };
+}
 
 const BENEFITS = [
   { icon: Star, title: "Reserva prioritaria", desc: "Asegura tu lugar antes que nadie en los horarios más populares." },
@@ -204,10 +208,20 @@ export default function LandingPage() {
   const [preselectedClass, setPreselectedClass] = useState<{ name: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<typeof MEMBERSHIPS[0] | null>(null);
-  const [pendingPlan, setPendingPlan] = useState<typeof MEMBERSHIPS[0] | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<PlanCard | null>(null);
+  const [pendingPlan, setPendingPlan] = useState<PlanCard | null>(null);
+  const [plans, setPlans] = useState<PlanCard[]>([]);
   const { client } = useClientAuth();
   const [, navigate] = useLocation();
+
+  useEffect(() => {
+    fetch(`${API_BASE}/memberships`)
+      .then((r) => r.json())
+      .then((data: ApiPlan[]) => {
+        if (Array.isArray(data)) setPlans(data.filter((p) => p.active).map(apiPlanToCard));
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 40);
@@ -245,7 +259,7 @@ export default function LandingPage() {
     }
   };
 
-  const handleComprarPaquete = (plan: typeof MEMBERSHIPS[0]) => {
+  const handleComprarPaquete = (plan: PlanCard) => {
     if (!client) {
       setPendingPlan(plan);
       setAuthOpen(true);
@@ -712,7 +726,7 @@ export default function LandingPage() {
           </AnimatedSection>
 
           <div className="grid md:grid-cols-3 gap-6 items-start">
-            {MEMBERSHIPS.map((plan, i) => (
+            {plans.map((plan, i) => (
               <motion.div
                 key={plan.name}
                 variants={fadeUp}

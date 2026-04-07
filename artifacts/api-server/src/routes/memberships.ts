@@ -52,6 +52,22 @@ router.post("/memberships", async (req, res): Promise<void> => {
   });
 });
 
+router.patch("/memberships/:id", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
+  const { name, description, totalClasses, price, durationDays, active } = req.body as Record<string, unknown>;
+  const updates: Record<string, unknown> = {};
+  if (typeof name === "string" && name) updates.name = name;
+  if (typeof description === "string") updates.description = description;
+  if (typeof totalClasses === "number") updates.totalClasses = totalClasses;
+  if (typeof price === "number") updates.price = price;
+  if (typeof durationDays === "number") updates.durationDays = durationDays;
+  if (typeof active === "boolean") updates.active = active;
+  const [plan] = await db.update(membershipsTable).set(updates).where(eq(membershipsTable.id, id)).returning();
+  if (!plan) { res.status(404).json({ error: "Not found" }); return; }
+  res.json({ id: plan.id, name: plan.name, description: plan.description ?? undefined, totalClasses: plan.totalClasses, price: plan.price, durationDays: plan.durationDays, active: plan.active });
+});
+
 router.delete("/memberships/:id", async (req, res): Promise<void> => {
   const params = DeleteMembershipParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: "Invalid id" }); return; }
