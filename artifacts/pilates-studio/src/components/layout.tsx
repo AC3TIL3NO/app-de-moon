@@ -15,7 +15,6 @@ import {
 import {
   LayoutDashboard,
   Users,
-  CalendarDays,
   CalendarClock,
   CreditCard,
   LogOut,
@@ -72,7 +71,6 @@ const ALL_NAV = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] },
   { name: "Clases", href: "/classes", icon: CalendarClock, roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] },
   { name: "Clientes", href: "/clients", icon: Users, roles: ["ADMIN", "RECEPTIONIST"] },
-  { name: "Calendario", href: "/calendar", icon: CalendarDays, roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] },
   { name: "Membresías", href: "/memberships", icon: CreditCard, roles: ["ADMIN", "RECEPTIONIST"] },
   { name: "Caja / Pagos", href: "/payments", icon: Receipt, roles: ["ADMIN", "RECEPTIONIST"] },
   { name: "Reportes", href: "/reports", icon: BarChart3, roles: ["ADMIN"] },
@@ -83,7 +81,6 @@ const BREADCRUMB_MAP: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/classes": "Clases",
   "/clients": "Clientes",
-  "/calendar": "Calendario",
   "/memberships": "Membresías",
   "/payments": "Caja / Pagos",
   "/reports": "Reportes",
