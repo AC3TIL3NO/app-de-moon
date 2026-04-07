@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, classesTable, instructorsTable } from "@workspace/db";
+import { db, classesTable, instructorsTable, reservationsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import {
   CreateClassBody,
@@ -113,6 +113,7 @@ router.delete("/classes/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
+  await db.delete(reservationsTable).where(eq(reservationsTable.classId, params.data.id));
   const [cls] = await db.delete(classesTable).where(eq(classesTable.id, params.data.id)).returning();
   if (!cls) {
     res.status(404).json({ error: "Class not found" });

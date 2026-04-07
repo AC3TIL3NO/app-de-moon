@@ -175,6 +175,85 @@ const BENEFITS = [
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "").replace("/landing", "") + "/api";
 
+const FAQ_ITEMS = [
+  {
+    q: "¿Necesito experiencia previa para tomar clases?",
+    a: "No. Ofrecemos clases para todos los niveles. Si es tu primera vez, te recomendamos empezar con Reformer Básico o una clase privada para que nuestras instructoras te guíen desde cero de forma segura.",
+  },
+  {
+    q: "¿Cuántas personas hay por clase?",
+    a: "Nuestras clases grupales tienen un máximo de 6 personas para garantizar atención personalizada. También ofrecemos sesiones privadas con dedicación exclusiva.",
+  },
+  {
+    q: "¿Cuáles son los horarios disponibles?",
+    a: "Lunes a viernes de 10:00 AM a 7:00 PM, y sábados de 10:00 AM a 2:00 PM. Puedes ver el horario completo y reservar tu cupo directamente en nuestra plataforma.",
+  },
+  {
+    q: "¿Cómo puedo pagar mi membresía?",
+    a: "Aceptamos tarjeta de crédito/débito (Visa, Mastercard), PayPal, Yappy y efectivo en estudio. Puedes pagar en línea al seleccionar tu plan desde la sección de Membresías.",
+  },
+  {
+    q: "¿Puedo cancelar o reprogramar una clase?",
+    a: "Sí. Puedes cancelar o reprogramar tu reserva con al menos 12 horas de anticipación sin penalidad. Para cambios de último momento, contáctanos por WhatsApp.",
+  },
+  {
+    q: "¿Tienen clases de prueba?",
+    a: "Ofrecemos primera clase gratis para nuevos clientes. Escríbenos por WhatsApp o Instagram para coordinar tu visita sin compromiso.",
+  },
+  {
+    q: "¿Dónde están ubicados?",
+    a: "Estamos en Atrio Mall, Costa del Este, Piso 2, Local C-16, Panamá. Contamos con estacionamiento disponible en el mall.",
+  },
+  {
+    q: "¿Las membresías tienen fecha de vencimiento?",
+    a: "Sí. Cada plan tiene una vigencia establecida. Moon Start vence en 30 días, Moon Flow en 30 días y los paquetes trimestrales/anuales tienen su vigencia correspondiente. Al vencer, puedes renovar desde la plataforma o en estudio.",
+  },
+];
+
+function FaqSection() {
+  const [open, setOpen] = useState<number | null>(null);
+  return (
+    <div className="space-y-3">
+      {FAQ_ITEMS.map((item, i) => (
+        <motion.div
+          key={i}
+          initial={false}
+          className="rounded-2xl border border-gray-200 bg-white overflow-hidden"
+        >
+          <button
+            onClick={() => setOpen(open === i ? null : i)}
+            className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left hover:bg-gray-50 transition-colors"
+          >
+            <span className="font-semibold text-gray-900 text-sm sm:text-base">{item.q}</span>
+            <motion.div
+              animate={{ rotate: open === i ? 180 : 0 }}
+              transition={{ duration: 0.25 }}
+              className="shrink-0"
+            >
+              <ChevronDown className="h-5 w-5 text-gray-400" />
+            </motion.div>
+          </button>
+          <AnimatePresence initial={false}>
+            {open === i && (
+              <motion.div
+                key="content"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <div className="px-6 pb-5 text-sm text-gray-500 leading-relaxed border-t border-gray-100 pt-4">
+                  {item.a}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
 function CardIcons({ dark = false }: { dark?: boolean }) {
   const bg = dark ? "#374151" : "#f3f4f6";
   const op = dark ? "opacity-70" : "opacity-60";
@@ -871,6 +950,124 @@ export default function LandingPage() {
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* TESTIMONIALS */}
+      <section className="py-28 px-6 bg-white overflow-hidden">
+        <div className="max-w-6xl mx-auto">
+          <AnimatedSection className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 text-sm font-medium px-4 py-1.5 rounded-full mb-6">
+              Lo que dicen nuestras clientas
+            </div>
+            <h2 className="text-4xl sm:text-5xl font-bold tracking-tight text-gray-900">
+              Resultados reales
+            </h2>
+            <p className="mt-4 text-lg text-gray-500 max-w-lg mx-auto">
+              Historias de transformación de nuestra comunidad Moon.
+            </p>
+          </AnimatedSection>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                name: "María Fernández",
+                role: "Miembro desde 2024",
+                text: "Llegué con dolor de espalda crónico después de dos embarazos. A los dos meses de clases privadas sentí un cambio enorme en mi postura y en mi core. Moon Pilates cambió mi vida.",
+                stars: 5,
+                initials: "MF",
+                color: "bg-violet-100 text-violet-700",
+              },
+              {
+                name: "Sofía Ramos",
+                role: "Moon Flow · 6 meses",
+                text: "Las instructoras son increíbles. Te conocen por tu nombre, recuerdan tus limitaciones y siempre están ajustando los ejercicios para que avances sin lesionarte. No existe otro lugar así en Panamá.",
+                stars: 5,
+                initials: "SR",
+                color: "bg-emerald-100 text-emerald-700",
+                highlight: true,
+              },
+              {
+                name: "Luciana Torres",
+                role: "Clases privadas",
+                text: "Vine por la recomendación de una amiga y desde la primera clase supe que era el lugar. El ambiente es relajado, limpio y muy profesional. Ya llevo 8 meses y no pienso parar.",
+                stars: 5,
+                initials: "LT",
+                color: "bg-amber-100 text-amber-700",
+              },
+              {
+                name: "Andrea Castillo",
+                role: "Reformer Básico",
+                text: "Nunca había hecho pilates. Llegué nerviosa pero las instructoras fueron superpaciantes. En tres semanas ya notaba diferencia. El horario de mañanas es perfecto para mí.",
+                stars: 5,
+                initials: "AC",
+                color: "bg-rose-100 text-rose-700",
+              },
+              {
+                name: "Valentina Cruz",
+                role: "Miembro Moon Star",
+                text: "Me lesioné la rodilla y mi fisioterapeuta me recomendó pilates. Moon fue la mejor decisión. Recuperé fuerza, mejoré mi movilidad y además perdí 6 kilos en 4 meses.",
+                stars: 5,
+                initials: "VC",
+                color: "bg-blue-100 text-blue-700",
+              },
+              {
+                name: "Camila Moreno",
+                role: "Pilates Integral",
+                text: "El estudio es hermoso, la ubicación es cómoda y el equipo siempre está disponible para ayudarte. Mi favorito es la clase de los sábados — es el mejor plan para el fin de semana.",
+                stars: 5,
+                initials: "CM",
+                color: "bg-fuchsia-100 text-fuchsia-700",
+              },
+            ].map((t, i) => (
+              <motion.div
+                key={t.name}
+                variants={fadeUp}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-60px" }}
+                custom={i * 0.5}
+                className={`rounded-2xl p-6 border transition-all ${
+                  t.highlight
+                    ? "bg-violet-600 border-violet-700 shadow-xl shadow-violet-200"
+                    : "bg-white border-gray-100 shadow-sm hover:shadow-md"
+                }`}
+              >
+                <div className="flex gap-1 mb-4">
+                  {Array.from({ length: t.stars }).map((_, s) => (
+                    <Star key={s} className={`h-4 w-4 fill-current ${t.highlight ? "text-violet-200" : "text-amber-400"}`} />
+                  ))}
+                </div>
+                <p className={`text-sm leading-relaxed mb-6 ${t.highlight ? "text-violet-100" : "text-gray-600"}`}>
+                  "{t.text}"
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${t.highlight ? "bg-white/20 text-white" : t.color}`}>
+                    {t.initials}
+                  </div>
+                  <div>
+                    <div className={`text-sm font-semibold ${t.highlight ? "text-white" : "text-gray-900"}`}>{t.name}</div>
+                    <div className={`text-xs ${t.highlight ? "text-violet-200" : "text-gray-400"}`}>{t.role}</div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-28 px-6 bg-stone-50">
+        <div className="max-w-3xl mx-auto">
+          <AnimatedSection className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 bg-stone-200 text-stone-600 text-sm font-medium px-4 py-1.5 rounded-full mb-6">
+              Preguntas frecuentes
+            </div>
+            <h2 className="text-4xl sm:text-5xl font-bold tracking-tight text-gray-900">
+              Resolvemos tus dudas
+            </h2>
+          </AnimatedSection>
+          <FaqSection />
         </div>
       </section>
 
