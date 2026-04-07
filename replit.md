@@ -44,8 +44,8 @@ A production-ready multi-tenant SaaS for pilates studio management with:
 - **Clientes** — Client table with side panel (attendance history, notes)
 - **Calendario** — Weekly grid view with attendance toggles + WhatsApp reminders
 - **Instructores** — Instructor cards
-- **Membresías** — Plans CRUD + Stripe checkout + client membership assignment
-- **Reportes** — 5 charts (revenue, new clients, cancellations, occupancy, memberships) — ADMIN only
+- **Membresías** — Plans CRUD + client membership assignment
+- **Reportes** — 5 charts (revenue, new clients, cancellations, occupancy, memberships) + CSV & PDF export — ADMIN only
 - **Configuración** — Studio settings form + branding color pickers — ADMIN only
 
 ### Layout
@@ -71,7 +71,7 @@ A production-ready multi-tenant SaaS for pilates studio management with:
 - `GET/PATCH /api/studio/settings` — studio config
 - `GET /api/reports/revenue|new-clients|cancellations|occupancy|memberships`
 - Standard CRUD for classes, clients, instructors, reservations, memberships
-- Stripe webhook + checkout session creation
+- Payment endpoints: PayPal (create-order, capture-order), Yappy, Efectivo/manual
 - WhatsApp notifications via Twilio
 
 ### Data Model (additions)
@@ -117,5 +117,10 @@ A production-ready multi-tenant SaaS for pilates studio management with:
 - Drizzle returns `Date` objects — call `.toISOString()` before Zod parse
 - JWT secret: uses `JWT_SECRET` env var, falls back to `SESSION_SECRET`
 - API client auth token getter set in `AuthContext` via `setAuthTokenGetter`
+- Currency: B/. (Panamanian Balboa, 1:1 USD) — NOT € or $
+- Stripe removed; payments via PayPal (sandbox → set PAYPAL_ENV=live for production), Yappy, and Efectivo
+- Staff API_BASE built in auth.tsx strips `/pilates-studio` prefix from BASE_URL before appending `/api`
+- Staff demo tokens stored in localStorage key `pilates_token`; client portal tokens stored as `moon_client_token`
+- Studio phone: +507 6586-9949; location: Atrio Mall Costa del Este Piso 2 Local C-16; email: moonpilatesstudiopty@gmail.com
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

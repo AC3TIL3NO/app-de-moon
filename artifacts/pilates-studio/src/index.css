@@ -172,3 +172,11 @@
     @apply font-medium tracking-tight;
   }
 }
+
+@media print {
+  [data-sidebar], aside, nav, .print\:hidden { display: none !important; }
+  header { display: none !important; }
+  main { padding: 0 !important; }
+  body { background: white !important; }
+  .shadow-sm, .shadow { box-shadow: none !important; }
+}

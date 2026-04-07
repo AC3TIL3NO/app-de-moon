@@ -13,8 +13,35 @@ import { Button } from "@/components/ui/button";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line,
 } from "recharts";
+import { FileSpreadsheet, Printer } from "lucide-react";
 
 const TABS = ["Mes Actual", "Últimos 3 Meses", "Este Año"];
+
+function formatCurrency(v: number) {
+  return `B/. ${v.toFixed(2)}`;
+}
+
+function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
+  if (!rows.length) return;
+  const headers = Object.keys(rows[0]);
+  const csvContent = [
+    headers.join(","),
+    ...rows.map(r =>
+      headers.map(h => {
+        const val = r[h];
+        const str = val === null || val === undefined ? "" : String(val);
+        return `"${str.replace(/"/g, '""')}"`;
+      }).join(",")
+    ),
+  ].join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState(0);
@@ -30,6 +57,40 @@ export default function Reports() {
   const totalCancellations = cancellations?.reduce((s, r) => s + r.cancelled, 0) ?? 0;
   const totalMemberships = memberships?.reduce((s, r) => s + r.count, 0) ?? 0;
 
+  const handleExportCsv = () => {
+    if (revenue?.length) {
+      downloadCsv("ingresos.csv", revenue.map(r => ({
+        Mes: r.month,
+        "Ingresos (B/.)": r.total.toFixed(2),
+        "Pagos": r.count,
+      })));
+    }
+    if (newClients?.length) {
+      downloadCsv("nuevos-clientes.csv", newClients.map(r => ({
+        Mes: r.month,
+        "Nuevos Clientes": r.count,
+      })));
+    }
+    if (cancellations?.length) {
+      downloadCsv("cancelaciones.csv", cancellations.map(r => ({
+        Mes: r.month,
+        "Reservas Totales": r.total,
+        "Cancelaciones": r.cancelled,
+      })));
+    }
+    if (memberships?.length) {
+      downloadCsv("membresias.csv", memberships.map(r => ({
+        Mes: r.month,
+        "Membresías": r.count,
+        "Ingresos (B/.)": r.revenue.toFixed(2),
+      })));
+    }
+  };
+
+  const handleExportPdf = () => {
+    window.print();
+  };
+
   return (
     <motion.div
       className="space-y-8"
@@ -42,25 +103,47 @@ export default function Reports() {
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">Reportes</h1>
           <p className="text-muted-foreground mt-2">Análisis completo del desempeño de tu estudio.</p>
         </div>
-        <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-xl">
-          {TABS.map((tab, i) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(i)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                activeTab === i
-                  ? "bg-white text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-xl">
+            {TABS.map((tab, i) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(i)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === i
+                    ? "bg-white text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 print:hidden">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 rounded-xl"
+              onClick={handleExportCsv}
             >
-              {tab}
-            </button>
-          ))}
+              <FileSpreadsheet className="h-4 w-4" />
+              Excel / CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 rounded-xl"
+              onClick={handleExportPdf}
+            >
+              <Printer className="h-4 w-4" />
+              Imprimir / PDF
+            </Button>
+          </div>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <SummaryCard title="Ingresos Totales" value={`€${totalRevenue.toFixed(0)}`} loading={loadingRevenue} color="text-primary" />
+        <SummaryCard title="Ingresos Totales" value={formatCurrency(totalRevenue)} loading={loadingRevenue} color="text-primary" />
         <SummaryCard title="Nuevos Clientes" value={totalClients.toString()} loading={loadingClients} color="text-emerald-600" />
         <SummaryCard title="Cancelaciones" value={totalCancellations.toString()} loading={loadingCancellations} color="text-orange-600" />
         <SummaryCard title="Membresías" value={totalMemberships.toString()} loading={loadingMemberships} color="text-violet-600" />
@@ -85,8 +168,8 @@ export default function Reports() {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                     <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => `€${v}`} />
-                    <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} formatter={(v: number) => [`€${v.toFixed(0)}`, "Ingresos"]} />
+                    <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => `B/.${v}`} />
+                    <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} formatter={(v: number) => [formatCurrency(v), "Ingresos"]} />
                     <Area type="monotone" dataKey="total" stroke="hsl(var(--primary))" strokeWidth={2.5} fill="url(#revenueGrad)" />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -186,7 +269,7 @@ export default function Reports() {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} formatter={(v: number, k: string) => [k === "revenue" ? `€${v.toFixed(0)}` : v, k === "revenue" ? "Ingresos" : "Ventas"]} />
+                  <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} formatter={(v: number, k: string) => [k === "revenue" ? formatCurrency(v) : v, k === "revenue" ? "Ingresos" : "Ventas"]} />
                   <Area type="monotone" dataKey="count" stroke="#a78bfa" strokeWidth={2.5} fill="url(#membGrad)" name="Membresías" />
                 </AreaChart>
               </ResponsiveContainer>

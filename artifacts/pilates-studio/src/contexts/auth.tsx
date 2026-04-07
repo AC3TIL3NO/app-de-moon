@@ -22,7 +22,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const TOKEN_KEY = "pilates_token";
 const USER_KEY = "pilates_user";
-const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") + "/api";
+const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates-studio$/, "") + "/api";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));

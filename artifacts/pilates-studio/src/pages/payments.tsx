@@ -110,7 +110,7 @@ export default function PaymentsPage() {
             <div className={`h-9 w-9 rounded-xl ${c.bg} flex items-center justify-center mb-3`}>
               <c.icon className={`h-4 w-4 ${c.color}`} />
             </div>
-            <div className="text-xl font-bold text-gray-900">${c.value.toFixed(2)}</div>
+            <div className="text-xl font-bold text-gray-900">B/. {c.value.toFixed(2)}</div>
             <div className="text-xs text-muted-foreground mt-0.5">{c.label}</div>
           </div>
         ))}
@@ -235,7 +235,7 @@ export default function PaymentsPage() {
                       </div>
                     </td>
                     <td className="py-3 px-4 text-gray-500">{p.chargedBy}</td>
-                    <td className="py-3 px-4 text-right font-bold text-gray-900">${p.amount.toFixed(2)}</td>
+                    <td className="py-3 px-4 text-right font-bold text-gray-900">B/. {p.amount.toFixed(2)}</td>
                     <td className="py-3 px-4 text-center">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
                         p.status === "paid"
@@ -255,8 +255,7 @@ export default function PaymentsPage() {
           <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
             <span className="text-xs text-muted-foreground">{payments.length} registros</span>
             <span className="text-sm font-bold text-gray-900">
-              Total: $
-              {payments.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0).toFixed(2)}
+              Total: B/. {payments.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0).toFixed(2)}
             </span>
           </div>
         )}
