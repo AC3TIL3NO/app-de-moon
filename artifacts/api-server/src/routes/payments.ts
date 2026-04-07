@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, paymentsTable, membershipsTable, clientMembershipsTable, clientsTable, reservationsTable } from "@workspace/db";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, requireRole } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -356,6 +356,46 @@ router.post("/payments/manual/confirm-yappy", requireAuth, async (req, res): Pro
     .returning();
 
   res.json(updated);
+});
+
+// ─── PATCH /api/payments/:id  (admin only) ───────────────────────────────────
+
+router.patch("/payments/:id", requireAuth, requireRole("ADMIN"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "ID inválido" }); return; }
+
+  const { concept, amount, paymentMethod, status } = req.body as {
+    concept?: string;
+    amount?: number;
+    paymentMethod?: string;
+    status?: string;
+  };
+
+  const [updated] = await db
+    .update(paymentsTable)
+    .set({
+      ...(concept !== undefined && { concept }),
+      ...(amount !== undefined && { amount: Number(amount) }),
+      ...(paymentMethod !== undefined && { paymentMethod }),
+      ...(status !== undefined && { status }),
+    })
+    .where(eq(paymentsTable.id, id))
+    .returning();
+
+  if (!updated) { res.status(404).json({ error: "Pago no encontrado" }); return; }
+  res.json(updated);
+});
+
+// ─── DELETE /api/payments/:id  (admin only) ───────────────────────────────────
+
+router.delete("/payments/:id", requireAuth, requireRole("ADMIN"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "ID inválido" }); return; }
+
+  const [deleted] = await db.delete(paymentsTable).where(eq(paymentsTable.id, id)).returning();
+  if (!deleted) { res.status(404).json({ error: "Pago no encontrado" }); return; }
+
+  res.sendStatus(204);
 });
 
 // ─── GET /api/client/payments ─────────────────────────────────────────────────

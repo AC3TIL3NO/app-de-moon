@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, reservationsTable, clientsTable, classesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import {
   CreateReservationBody,
   CancelReservationParams,
@@ -49,10 +49,19 @@ router.post("/reservations", async (req, res): Promise<void> => {
     status: "Confirmada",
   }).returning();
 
-  // Update enrolled count on the class
+  // Update enrolled count (only Confirmada reservations)
+  const [confirmedCount] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(reservationsTable)
+    .where(
+      and(
+        eq(reservationsTable.classId, parsed.data.classId),
+        eq(reservationsTable.status, "Confirmada"),
+      ),
+    );
   await db
     .update(classesTable)
-    .set({ enrolled: db.$count(reservationsTable, eq(reservationsTable.classId, parsed.data.classId)) as unknown as number })
+    .set({ enrolled: confirmedCount?.count ?? 0 })
     .where(eq(classesTable.id, parsed.data.classId));
 
   const [client] = await db.select().from(clientsTable).where(eq(clientsTable.id, parsed.data.clientId));
@@ -113,6 +122,22 @@ router.delete("/reservations/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Reservation not found" });
     return;
   }
+
+  // Recalculate enrolled count (only Confirmada reservations)
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(reservationsTable)
+    .where(
+      and(
+        eq(reservationsTable.classId, reservation.classId),
+        eq(reservationsTable.status, "Confirmada"),
+      ),
+    );
+  await db
+    .update(classesTable)
+    .set({ enrolled: countResult?.count ?? 0 })
+    .where(eq(classesTable.id, reservation.classId));
+
   res.sendStatus(204);
 });
 
