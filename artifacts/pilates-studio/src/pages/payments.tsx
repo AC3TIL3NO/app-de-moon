@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
-import { DollarSign, CreditCard, Banknote, Smartphone, ArrowUpRight, Filter, RefreshCw, Pencil, Trash2, X, Save } from "lucide-react";
+import {
+  DollarSign, CreditCard, Banknote, Smartphone, ArrowUpRight,
+  Filter, RefreshCw, Pencil, Trash2, X, Save, PlusCircle,
+  Receipt, User, ChevronDown,
+} from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -8,6 +12,7 @@ const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates
 interface Payment {
   id: number;
   clientId: number;
+  membershipId?: number | null;
   clientName?: string;
   clientEmail?: string;
   concept: string;
@@ -27,23 +32,326 @@ interface Summary {
   yappy: number;
   transferencia: number;
   pendiente: number;
+  byMethod: Record<string, number>;
 }
 
-const METHOD_OPTS = ["Todos", "PayPal", "Yappy", "Efectivo", "Transferencia", "Otro"];
+interface MembershipPlan {
+  id: number;
+  name: string;
+  totalClasses: number;
+  price: number;
+  durationDays: number;
+  active: boolean;
+}
+
+interface Client {
+  id: number;
+  name: string;
+  email: string;
+}
+
+const PAYMENT_METHODS = [
+  "Efectivo",
+  "Yappy",
+  "Visa",
+  "Mastercard",
+  "PayPal",
+  "PagueloFacil",
+  "Transferencia",
+];
+
+const METHOD_OPTS = ["Todos", ...PAYMENT_METHODS];
 const STATUS_OPTS = ["Todos", "paid", "pending"];
-const PAYMENT_METHODS = ["Efectivo", "Yappy", "PayPal", "Transferencia", "Tarjeta"];
-
-function methodLabel(m: string) {
-  return m === "PayPal" ? "Tarjeta / PayPal" : m;
-}
 
 function methodIcon(m: string) {
   if (m === "Efectivo") return <Banknote className="h-4 w-4 text-emerald-500" />;
   if (m === "Yappy") return <Smartphone className="h-4 w-4 text-green-600" />;
-  if (m === "PayPal" || m === "Tarjeta") return <CreditCard className="h-4 w-4 text-blue-500" />;
-  if (m === "Transferencia") return <ArrowUpRight className="h-4 w-4 text-indigo-500" />;
+  if (m === "PayPal" || m === "PagueloFacil") return <CreditCard className="h-4 w-4 text-blue-500" />;
+  if (m === "Visa" || m === "Mastercard" || m === "Tarjeta") return <CreditCard className="h-4 w-4 text-indigo-500" />;
+  if (m === "Transferencia") return <ArrowUpRight className="h-4 w-4 text-orange-500" />;
   return <DollarSign className="h-4 w-4 text-gray-400" />;
 }
+
+function methodColor(m: string) {
+  if (m === "Efectivo") return "text-emerald-600 bg-emerald-50";
+  if (m === "Yappy") return "text-green-700 bg-green-50";
+  if (m === "PayPal") return "text-blue-600 bg-blue-50";
+  if (m === "PagueloFacil") return "text-sky-600 bg-sky-50";
+  if (m === "Visa" || m === "Mastercard") return "text-indigo-600 bg-indigo-50";
+  if (m === "Transferencia") return "text-orange-600 bg-orange-50";
+  return "text-gray-600 bg-gray-50";
+}
+
+// ─── Register Payment Modal ────────────────────────────────────────────────────
+
+interface RegisterPaymentModalProps {
+  onClose: () => void;
+  onSaved: () => void;
+  currentUser: { name: string; email: string };
+}
+
+function RegisterPaymentModal({ onClose, onSaved, currentUser }: RegisterPaymentModalProps) {
+  const { toast } = useToast();
+  const [plans, setPlans] = useState<MembershipPlan[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<MembershipPlan | null>(null);
+  const [clientSearch, setClientSearch] = useState("");
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [showClientList, setShowClientList] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("Efectivo");
+  const [customAmount, setCustomAmount] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("pilates_token") ?? "";
+    const h = { Authorization: `Bearer ${token}` };
+    Promise.all([
+      fetch(`${API_BASE}/memberships`, { headers: h }).then(r => r.ok ? r.json() : []),
+      fetch(`${API_BASE}/clients`, { headers: h }).then(r => r.ok ? r.json() : []),
+    ]).then(([m, c]) => {
+      setPlans((m as MembershipPlan[]).filter(p => p.active));
+      setClients(c as Client[]);
+    });
+  }, []);
+
+  const filteredClients = clients.filter(c =>
+    c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+    c.email.toLowerCase().includes(clientSearch.toLowerCase())
+  ).slice(0, 8);
+
+  const amount = customAmount ? parseFloat(customAmount) : (selectedPlan?.price ?? 0);
+
+  const handleSave = async () => {
+    if (!selectedClient) { toast({ title: "Selecciona un cliente.", variant: "destructive" }); return; }
+    if (amount <= 0) { toast({ title: "Ingresa un monto válido.", variant: "destructive" }); return; }
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/payments/manual`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("pilates_token") ?? ""}`,
+        },
+        body: JSON.stringify({
+          clientId: selectedClient.id,
+          membershipId: selectedPlan?.id ?? null,
+          concept: selectedPlan ? `${selectedPlan.name} · ${selectedPlan.totalClasses} clases` : "Pago manual",
+          amount,
+          paymentMethod,
+          chargedBy: currentUser.name,
+          activateMembership: !!selectedPlan,
+          status: "paid",
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: "Pago registrado correctamente." });
+      onSaved();
+      onClose();
+    } catch {
+      toast({ title: "Error al registrar el pago.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Receipt className="h-4 w-4 text-primary" />
+            </div>
+            <span className="font-semibold text-gray-900">Registrar Cobro</span>
+          </div>
+          <button onClick={onClose} className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-gray-100 text-gray-400">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* Membership plan selector */}
+          <div>
+            <label className="text-sm font-semibold text-gray-700 mb-2 block">Plan de Membresía</label>
+            <div className="grid grid-cols-1 gap-2">
+              {plans.map(plan => (
+                <button
+                  key={plan.id}
+                  onClick={() => { setSelectedPlan(selectedPlan?.id === plan.id ? null : plan); setCustomAmount(""); }}
+                  className={`flex items-center justify-between p-3.5 rounded-xl border-2 transition-all text-left ${
+                    selectedPlan?.id === plan.id
+                      ? "border-primary bg-primary/5 shadow-sm"
+                      : "border-gray-100 hover:border-gray-200"
+                  }`}
+                >
+                  <div>
+                    <div className="font-semibold text-gray-900 text-sm">{plan.name}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{plan.totalClasses} clases · {plan.durationDays} días · Sin ITBMS</div>
+                  </div>
+                  <div className={`text-lg font-black ${selectedPlan?.id === plan.id ? "text-primary" : "text-gray-800"}`}>
+                    B/. {plan.price}
+                  </div>
+                </button>
+              ))}
+              <button
+                onClick={() => { setSelectedPlan(null); }}
+                className={`flex items-center gap-2 p-3.5 rounded-xl border-2 transition-all text-left ${
+                  !selectedPlan ? "border-primary bg-primary/5" : "border-gray-100 hover:border-gray-200"
+                }`}
+              >
+                <span className="text-sm text-gray-600 font-medium">Otro concepto (monto libre)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Client selector */}
+          <div className="relative">
+            <label className="text-sm font-semibold text-gray-700 mb-2 block">Cliente</label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                value={selectedClient ? selectedClient.name : clientSearch}
+                onChange={e => { setClientSearch(e.target.value); setSelectedClient(null); setShowClientList(true); }}
+                onFocus={() => setShowClientList(true)}
+                placeholder="Buscar cliente..."
+                className="w-full h-10 pl-9 pr-9 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            </div>
+            {showClientList && !selectedClient && filteredClients.length > 0 && (
+              <div className="absolute z-20 top-full mt-1 w-full bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden">
+                {filteredClients.map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => { setSelectedClient(c); setClientSearch(""); setShowClientList(false); }}
+                    className="w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="text-sm font-medium text-gray-900">{c.name}</div>
+                    <div className="text-xs text-gray-500">{c.email}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {selectedClient && (
+              <div className="mt-2 flex items-center gap-2 p-2.5 bg-primary/5 rounded-lg border border-primary/20">
+                <div className="h-6 w-6 rounded-full bg-primary text-white text-xs flex items-center justify-center font-bold shrink-0">
+                  {selectedClient.name.charAt(0)}
+                </div>
+                <span className="text-sm font-medium text-gray-900 flex-1">{selectedClient.name}</span>
+                <button onClick={() => setSelectedClient(null)} className="text-gray-400 hover:text-gray-600">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Amount */}
+          <div>
+            <label className="text-sm font-semibold text-gray-700 mb-2 block">
+              Monto {selectedPlan ? `(Plan: B/. ${selectedPlan.price})` : "(Libre)"}
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 font-medium">B/.</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder={selectedPlan ? selectedPlan.price.toString() : "0.00"}
+                value={customAmount}
+                onChange={e => setCustomAmount(e.target.value)}
+                className="w-full h-10 pl-10 pr-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+            {selectedPlan && !customAmount && (
+              <p className="text-xs text-gray-500 mt-1">Se cobrará B/. {selectedPlan.price} por {selectedPlan.totalClasses} clases</p>
+            )}
+          </div>
+
+          {/* Payment method */}
+          <div>
+            <label className="text-sm font-semibold text-gray-700 mb-2 block">Método de Pago</label>
+            <div className="grid grid-cols-3 gap-2">
+              {PAYMENT_METHODS.map(m => (
+                <button
+                  key={m}
+                  onClick={() => setPaymentMethod(m)}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-xs font-semibold ${
+                    paymentMethod === m
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-gray-100 text-gray-600 hover:border-gray-200"
+                  }`}
+                >
+                  {methodIcon(m)}
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Cashier info */}
+          <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-100">
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-7 rounded-full bg-primary text-white text-xs flex items-center justify-center font-bold shrink-0">
+                {currentUser.name.charAt(0)}
+              </div>
+              <div>
+                <div className="text-xs text-gray-500">Cajero/a</div>
+                <div className="text-sm font-semibold text-gray-900">{currentUser.name}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Summary preview */}
+          {(selectedClient || selectedPlan || amount > 0) && (
+            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-1.5">
+              <div className="text-xs font-bold text-primary uppercase tracking-wide mb-2">Resumen del cobro</div>
+              {selectedClient && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Cliente</span>
+                  <span className="font-medium text-gray-900">{selectedClient.name}</span>
+                </div>
+              )}
+              {selectedPlan && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Plan</span>
+                  <span className="font-medium text-gray-900">{selectedPlan.name}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Método</span>
+                <span className="font-medium text-gray-900">{paymentMethod}</span>
+              </div>
+              <div className="flex justify-between text-sm border-t border-primary/20 pt-1.5 mt-1.5">
+                <span className="font-bold text-gray-900">Total</span>
+                <span className="font-black text-primary text-base">B/. {amount.toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 px-6 pb-6">
+          <button
+            onClick={onClose}
+            className="flex-1 h-10 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !selectedClient || amount <= 0}
+            className="flex-1 h-10 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
+          >
+            <Receipt className="h-4 w-4" />
+            {saving ? "Registrando..." : "Confirmar Cobro"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Edit Modal ───────────────────────────────────────────────────────────────
 
 interface EditModalProps {
   payment: Payment;
@@ -173,6 +481,8 @@ function EditPaymentModal({ payment, onClose, onSaved }: EditModalProps) {
   );
 }
 
+// ─── Delete Dialog ────────────────────────────────────────────────────────────
+
 interface DeleteDialogProps {
   payment: Payment;
   onClose: () => void;
@@ -238,9 +548,12 @@ function DeletePaymentDialog({ payment, onClose, onDeleted }: DeleteDialogProps)
   );
 }
 
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function PaymentsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
+  const canRegister = user?.role === "ADMIN" || user?.role === "RECEPTIONIST";
 
   const [payments, setPayments] = useState<Payment[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -251,6 +564,7 @@ export default function PaymentsPage() {
   const [dateTo, setDateTo] = useState("");
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [deletingPayment, setDeletingPayment] = useState<Payment | null>(null);
+  const [showRegister, setShowRegister] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -277,14 +591,16 @@ export default function PaymentsPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const SUMMARY_CARDS = summary
+  // Build summary cards from byMethod (dynamic) + fixed totals
+  const summaryCards = summary
     ? [
-        { label: "Total hoy", value: summary.totalHoy, icon: DollarSign, color: "text-violet-600", bg: "bg-violet-50" },
-        { label: "Tarjeta", value: summary.tarjeta, icon: CreditCard, color: "text-blue-600", bg: "bg-blue-50" },
-        { label: "Efectivo", value: summary.efectivo, icon: Banknote, color: "text-emerald-600", bg: "bg-emerald-50" },
-        { label: "Yappy", value: summary.yappy, icon: Smartphone, color: "text-green-600", bg: "bg-green-50" },
-        { label: "Transferencia", value: summary.transferencia, icon: ArrowUpRight, color: "text-indigo-600", bg: "bg-indigo-50" },
-        { label: "Pendiente", value: summary.pendiente, icon: DollarSign, color: "text-amber-600", bg: "bg-amber-50" },
+        { label: "Total hoy", value: summary.totalHoy, icon: DollarSign, cls: "text-violet-600 bg-violet-50" },
+        { label: "Efectivo", value: summary.byMethod?.["Efectivo"] ?? 0, icon: Banknote, cls: "text-emerald-600 bg-emerald-50" },
+        { label: "Yappy", value: summary.byMethod?.["Yappy"] ?? 0, icon: Smartphone, cls: "text-green-600 bg-green-50" },
+        { label: "Visa / Mastercard", value: (summary.byMethod?.["Visa"] ?? 0) + (summary.byMethod?.["Mastercard"] ?? 0), icon: CreditCard, cls: "text-indigo-600 bg-indigo-50" },
+        { label: "PayPal / PagueloFacil", value: (summary.byMethod?.["PayPal"] ?? 0) + (summary.byMethod?.["PagueloFacil"] ?? 0), icon: CreditCard, cls: "text-blue-600 bg-blue-50" },
+        { label: "Transferencia", value: summary.byMethod?.["Transferencia"] ?? 0, icon: ArrowUpRight, cls: "text-orange-600 bg-orange-50" },
+        { label: "Pendiente", value: summary.pendiente, icon: DollarSign, cls: "text-amber-600 bg-amber-50" },
       ]
     : [];
 
@@ -292,30 +608,42 @@ export default function PaymentsPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">Caja y Pagos</h1>
-          <p className="text-sm text-muted-foreground mt-1">Registro de todos los pagos del estudio</p>
+          <p className="text-sm text-muted-foreground mt-1">Registro de cobros · {new Date().toLocaleDateString("es-PA", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}</p>
         </div>
-        <button
-          onClick={fetchData}
-          disabled={loading}
-          className="flex items-center gap-2 h-9 px-4 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:bg-accent disabled:opacity-50 transition-colors"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          Actualizar
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchData}
+            disabled={loading}
+            className="flex items-center gap-2 h-9 px-4 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:bg-accent disabled:opacity-50 transition-colors"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Actualizar
+          </button>
+          {canRegister && (
+            <button
+              onClick={() => setShowRegister(true)}
+              className="flex items-center gap-2 h-9 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
+            >
+              <PlusCircle className="h-4 w-4" />
+              Registrar Cobro
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {SUMMARY_CARDS.map(c => (
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        {summaryCards.map(c => (
           <div key={c.label} className="bg-card rounded-2xl border border-border/50 p-4 shadow-sm">
-            <div className={`h-9 w-9 rounded-xl ${c.bg} flex items-center justify-center mb-3`}>
-              <c.icon className={`h-4 w-4 ${c.color}`} />
+            <div className={`h-8 w-8 rounded-xl ${c.cls.split(" ")[1]} flex items-center justify-center mb-2.5`}>
+              <c.icon className={`h-4 w-4 ${c.cls.split(" ")[0]}`} />
             </div>
-            <div className="text-xl font-bold text-foreground">B/. {c.value.toFixed(2)}</div>
-            <div className="text-xs text-muted-foreground mt-0.5">{c.label}</div>
+            <div className="text-lg font-bold text-foreground">B/. {c.value.toFixed(2)}</div>
+            <div className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{c.label}</div>
           </div>
         ))}
       </div>
@@ -328,7 +656,7 @@ export default function PaymentsPage() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Método de pago</label>
+            <label className="text-xs text-muted-foreground mb-1 block">Método</label>
             <select
               value={methodFilter}
               onChange={e => setMethodFilter(e.target.value)}
@@ -371,7 +699,7 @@ export default function PaymentsPage() {
             onClick={fetchData}
             className="h-9 px-5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
           >
-            Aplicar filtros
+            Aplicar
           </button>
           <button
             onClick={() => { setMethodFilter("Todos"); setStatusFilter("Todos"); setDateFrom(""); setDateTo(""); }}
@@ -390,9 +718,9 @@ export default function PaymentsPage() {
               <tr className="border-b border-border/50 bg-muted/30">
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground">Fecha</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground">Cliente</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground">Concepto</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground">Concepto / Plan</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground">Método</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground">Cajera</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground">Cajero/a</th>
                 <th className="text-right py-3 px-4 text-xs font-semibold text-muted-foreground">Monto</th>
                 <th className="text-center py-3 px-4 text-xs font-semibold text-muted-foreground">Estado</th>
                 {isAdmin && <th className="text-center py-3 px-4 text-xs font-semibold text-muted-foreground">Acciones</th>}
@@ -418,28 +746,29 @@ export default function PaymentsPage() {
               ) : (
                 payments.map(p => (
                   <tr key={p.id} className="hover:bg-muted/20 transition-colors">
-                    <td className="py-3 px-4 text-muted-foreground whitespace-nowrap">
+                    <td className="py-3 px-4 text-muted-foreground whitespace-nowrap text-xs">
                       {new Date(p.createdAt).toLocaleDateString("es-PA", { day: "2-digit", month: "short", year: "numeric" })}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-medium text-foreground">{p.clientName ?? `Cliente #${p.clientId}`}</div>
-                      {p.clientEmail && <div className="text-xs text-muted-foreground">{p.clientEmail}</div>}
-                    </td>
-                    <td className="py-3 px-4 text-foreground/80">{p.concept}</td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        {methodIcon(p.paymentMethod)}
-                        <span className="text-foreground/80">
-                          {methodLabel(p.paymentMethod)}
-                          {p.cardBrand && p.cardLast4 && (
-                            <span className="text-muted-foreground ml-1">
-                              · {p.cardBrand.charAt(0).toUpperCase() + p.cardBrand.slice(1)} •••• {p.cardLast4}
-                            </span>
-                          )}
-                        </span>
+                      <div className="text-[10px] text-muted-foreground/60">
+                        {new Date(p.createdAt).toLocaleTimeString("es-PA", { hour: "2-digit", minute: "2-digit" })}
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-muted-foreground">{p.chargedBy}</td>
+                    <td className="py-3 px-4">
+                      <div className="font-medium text-foreground text-sm">{p.clientName ?? `Cliente #${p.clientId}`}</div>
+                      {p.clientEmail && <div className="text-xs text-muted-foreground">{p.clientEmail}</div>}
+                    </td>
+                    <td className="py-3 px-4 text-foreground/80 text-sm max-w-[180px]">
+                      <div className="truncate">{p.concept}</div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${methodColor(p.paymentMethod)}`}>
+                        {methodIcon(p.paymentMethod)}
+                        {p.paymentMethod}
+                        {p.cardBrand && p.cardLast4 && (
+                          <span className="opacity-70">•••• {p.cardLast4}</span>
+                        )}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-sm text-muted-foreground">{p.chargedBy}</td>
                     <td className="py-3 px-4 text-right font-bold text-foreground">B/. {p.amount.toFixed(2)}</td>
                     <td className="py-3 px-4 text-center">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
@@ -480,12 +809,20 @@ export default function PaymentsPage() {
           <div className="px-4 py-3 border-t border-border/30 flex items-center justify-between">
             <span className="text-xs text-muted-foreground">{payments.length} registros</span>
             <span className="text-sm font-bold text-foreground">
-              Total: B/. {payments.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0).toFixed(2)}
+              Total pagado: B/. {payments.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0).toFixed(2)}
             </span>
           </div>
         )}
       </div>
 
+      {/* Modals */}
+      {showRegister && user && (
+        <RegisterPaymentModal
+          currentUser={{ name: user.name ?? user.email, email: user.email }}
+          onClose={() => setShowRegister(false)}
+          onSaved={fetchData}
+        />
+      )}
       {editingPayment && (
         <EditPaymentModal
           payment={editingPayment}
@@ -493,7 +830,6 @@ export default function PaymentsPage() {
           onSaved={fetchData}
         />
       )}
-
       {deletingPayment && (
         <DeletePaymentDialog
           payment={deletingPayment}

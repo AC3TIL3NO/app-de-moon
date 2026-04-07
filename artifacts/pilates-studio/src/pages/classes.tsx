@@ -48,10 +48,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 
 const WEEKDAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
-const WEEKEND_DAYS = ["Sábado", "Domingo"];
+const WEEKEND_DAYS = ["Sábado"];
 const ALL_DAYS = [...WEEKDAYS, ...WEEKEND_DAYS];
 
-const WEEKDAY_SLOTS = [
+const ALL_SLOTS = [
   { value: "10:00", label: "10:00 AM", end: "11:00 AM" },
   { value: "11:00", label: "11:00 AM", end: "12:00 PM" },
   { value: "12:00", label: "12:00 PM", end: "1:00 PM" },
@@ -61,19 +61,13 @@ const WEEKDAY_SLOTS = [
   { value: "16:00", label: "4:00 PM",  end: "5:00 PM" },
   { value: "17:00", label: "5:00 PM",  end: "6:00 PM" },
   { value: "18:00", label: "6:00 PM",  end: "7:00 PM" },
-];
-
-const SATURDAY_SLOTS = [
-  { value: "10:00", label: "10:00 AM", end: "11:00 AM" },
-  { value: "11:00", label: "11:00 AM", end: "12:00 PM" },
-  { value: "12:00", label: "12:00 PM", end: "1:00 PM" },
-  { value: "13:00", label: "1:00 PM",  end: "2:00 PM" },
+  { value: "19:00", label: "7:00 PM",  end: "8:00 PM" },
 ];
 
 const CAPACITY = 6;
 
-function getSlotsForDay(dayName: string) {
-  return dayName === "Sábado" ? SATURDAY_SLOTS : WEEKDAY_SLOTS;
+function getSlotsForDay(_dayName: string) {
+  return ALL_SLOTS;
 }
 
 function getWeekDates(offset: number): { label: string; date: string; dayName: string }[] {
@@ -133,7 +127,7 @@ export default function Classes() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Clases</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Horario semanal · máx. {CAPACITY} por clase · Sáb hasta 2:00 PM
+            Horario semanal · Lun–Sáb · 10:00 AM – 8:00 PM · máx. {CAPACITY} por clase · 60 min
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -169,7 +163,7 @@ export default function Classes() {
               </tr>
             </thead>
             <tbody>
-              {WEEKDAY_SLOTS.map((slot, si) => (
+              {ALL_SLOTS.map((slot, si) => (
                 <tr key={slot.value} className={si % 2 === 0 ? "bg-card" : "bg-muted/10"}>
                   <td className="border-b border-r border-border/40 p-2 text-center align-middle sticky left-0 bg-muted/20">
                     <div className="text-[11px] font-bold text-foreground">{slot.label}</div>
@@ -311,7 +305,7 @@ function ClassSlotDialog({
   if (!slot) return null;
 
   const { dayName, date, time, cls } = slot;
-  const slotInfo = WEEKDAY_SLOTS.find(s => s.value === time) ?? SATURDAY_SLOTS.find(s => s.value === time);
+  const slotInfo = ALL_SLOTS.find(s => s.value === time);
 
   const classReservations = cls
     ? (reservations?.filter(r => r.classId === cls.id && r.status === "Confirmada") ?? [])

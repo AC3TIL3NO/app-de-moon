@@ -28,7 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates-studio$/, "") + "/api";
 
-const HIGHLIGHTED_PLAN = "Moon Flow";
+const HIGHLIGHTED_PLAN = "Pilates Plus";
 
 const STATUS_COLORS: Record<string, string> = {
   Activa: "bg-primary/10 text-primary",
