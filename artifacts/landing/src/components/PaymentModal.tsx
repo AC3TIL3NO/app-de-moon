@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, CreditCard, Smartphone, Banknote, CheckCircle2, Copy, ExternalLink, Loader2, AlertCircle } from "lucide-react";
+import { X, CreditCard, Smartphone, CheckCircle2, Copy, ExternalLink, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@clerk/react";
 import { useClientContext } from "@/contexts/clientContext";
 
@@ -22,7 +22,7 @@ interface Props {
   onSuccess: (method: string) => void;
 }
 
-type Tab = "paypal" | "yappy" | "efectivo";
+type Tab = "paypal" | "yappy";
 
 declare global {
   interface Window {
@@ -200,7 +200,6 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
   const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "paypal", label: "Tarjeta / PayPal", icon: <CreditCard className="h-4 w-4" /> },
     { id: "yappy", label: "Yappy", icon: <Smartphone className="h-4 w-4" /> },
-    { id: "efectivo", label: "Efectivo", icon: <Banknote className="h-4 w-4" /> },
   ];
 
   return (
@@ -413,58 +412,6 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
                 </div>
               )}
 
-              {/* Efectivo tab */}
-              {tab === "efectivo" && (
-                <div className="space-y-4">
-                  <div className="bg-gray-50 rounded-2xl p-5 text-center">
-                    <div className="h-14 w-14 bg-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                      <Banknote className="h-7 w-7 text-gray-600" />
-                    </div>
-                    <p className="text-sm font-semibold text-gray-900">Pago en el estudio</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Paga directamente en recepción en efectivo o con tarjeta a través de nuestro POS.
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
-                      <div className="h-8 w-8 bg-gray-200 rounded-lg flex items-center justify-center shrink-0">
-                        <span className="text-xs">📍</span>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-gray-700">Ubicación</p>
-                        <p className="text-xs text-gray-500">Atrio Mall Costa del Este, Piso 2 Local C-16</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
-                      <div className="h-8 w-8 bg-gray-200 rounded-lg flex items-center justify-center shrink-0">
-                        <span className="text-xs">🕐</span>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-gray-700">Horario de atención</p>
-                        <p className="text-xs text-gray-500">Lunes a viernes 6:00 am – 8:00 pm · Sábados 7:00 am – 1:00 pm</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <a
-                    href={`https://wa.me/50765869949?text=${encodeURIComponent(`Hola! Quiero reservar la membresía ${plan.name} (B/. ${plan.numericPrice.toFixed(2)}) y pagar en efectivo.`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full h-12 bg-gray-900 text-white rounded-2xl font-semibold text-sm hover:bg-gray-800 transition-colors"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Coordinar por WhatsApp
-                  </a>
-
-                  <button
-                    onClick={onClose}
-                    className="w-full h-10 rounded-2xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-              )}
             </div>
           </motion.div>
         </motion.div>
