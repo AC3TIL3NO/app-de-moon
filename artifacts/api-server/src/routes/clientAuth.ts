@@ -76,6 +76,29 @@ async function requireClientAuth(req: Request, res: Response, next: NextFunction
   }
 }
 
+// PATCH /api/client/profile — complete or update profile
+router.patch("/client/profile", requireClientAuth, async (req, res): Promise<void> => {
+  const { clientId } = (req as any).client as ClientPayload;
+  const { firstName, lastName, phone } = req.body as { firstName?: string; lastName?: string; phone?: string };
+
+  if (!firstName?.trim() || !phone?.trim()) {
+    res.status(400).json({ error: "Nombre y teléfono son requeridos" });
+    return;
+  }
+
+  const name = [firstName.trim(), (lastName ?? "").trim()].filter(Boolean).join(" ");
+  const normalizedPhone = phone.trim();
+
+  const updated = await db
+    .update(clientsTable)
+    .set({ name, phone: normalizedPhone })
+    .where(eq(clientsTable.id, clientId))
+    .returning();
+
+  const c = updated[0]!;
+  res.json({ id: c.id, name: c.name, email: c.email, phone: c.phone, plan: c.plan, classesRemaining: c.classesRemaining });
+});
+
 // GET /api/client/me
 router.get("/client/me", requireClientAuth, async (req, res): Promise<void> => {
   const { clientId } = (req as any).client as ClientPayload;

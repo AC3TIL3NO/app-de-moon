@@ -10,6 +10,7 @@ import { useUser, useAuth, useClerk } from "@clerk/react";
 import { useClientContext } from "@/contexts/clientContext";
 import { API_BASE } from "@/lib/api";
 import { BookingModal } from "@/components/BookingModal";
+import { ProfileCompletion } from "@/components/ProfileCompletion";
 
 const NAV_ITEMS = [
   { id: "reservas", icon: Calendar, label: "Mis Reservas" },
@@ -60,7 +61,7 @@ export default function ClientDashboard() {
   const { isLoaded, isSignedIn } = useUser();
   const { getToken } = useAuth();
   const { signOut } = useClerk();
-  const { client } = useClientContext();
+  const { client, refetch: refetchClient } = useClientContext();
   const [, navigate] = useLocation();
   const [section, setSection] = useState("reservas");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -143,6 +144,8 @@ export default function ClientDashboard() {
       <div className="h-8 w-8 rounded-full border-2 border-gray-300 border-t-gray-900 animate-spin" />
     </div>
   );
+
+  if (!client.phone) return <ProfileCompletion onComplete={refetchClient} />;
 
   return (
     <div className="min-h-screen bg-gray-50 font-inter flex">
