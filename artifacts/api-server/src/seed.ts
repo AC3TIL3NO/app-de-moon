@@ -80,24 +80,25 @@ export async function seedDatabase(): Promise<void> {
       logger.info({ studioId }, "seed: studio already exists");
     }
 
-    // ─── 2. Users ────────────────────────────────────────────────────────────
-    const existingUsers = await db.select().from(usersTable).limit(1);
+    // ─── 2. Admin user — always ensure Shantel exists ────────────────────────
+    const shantel = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.email, "moonpilatesstudiopty@gmail.com"))
+      .limit(1);
 
-    if (existingUsers.length === 0) {
-      logger.info("seed: creating admin user...");
-      const ROUNDS = 10;
-      await db.insert(usersTable).values([
-        {
-          email: "moonpilatesstudiopty@gmail.com",
-          name: "Shantel Amaya",
-          passwordHash: await bcrypt.hash("123456789", ROUNDS),
-          role: "ADMIN" as const,
-          studioId,
-        },
-      ]);
+    if (shantel.length === 0) {
+      logger.info("seed: creating admin user Shantel Amaya...");
+      await db.insert(usersTable).values({
+        email: "moonpilatesstudiopty@gmail.com",
+        name: "Shantel Amaya",
+        passwordHash: await bcrypt.hash("123456789", 10),
+        role: "ADMIN" as const,
+        studioId,
+      });
       logger.info("seed: admin user created");
     } else {
-      logger.info("seed: users already exist");
+      logger.info({ id: shantel[0]!.id }, "seed: admin user already exists");
     }
 
     // ─── 3. Instructor ───────────────────────────────────────────────────────
