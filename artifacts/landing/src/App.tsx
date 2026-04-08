@@ -20,16 +20,7 @@ function stripBase(path: string): string {
 }
 
 function HomeRedirect() {
-  return (
-    <>
-      <Show when="signed-in">
-        <Redirect to="/dashboard" />
-      </Show>
-      <Show when="signed-out">
-        <LandingPage />
-      </Show>
-    </>
-  );
+  return <LandingPage />;
 }
 
 function SignInPage() {

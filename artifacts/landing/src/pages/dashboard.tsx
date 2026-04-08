@@ -87,9 +87,9 @@ export default function ClientDashboard() {
       const h = token ? { Authorization: `Bearer ${token}` } : {};
       Promise.all([
         fetch(`${API_BASE}/client/reservations`, { headers: h })
-          .then(r => r.json()).then(setReservations).catch(() => setReservations([])),
+          .then(r => r.json()).then(data => setReservations(Array.isArray(data) ? data : [])).catch(() => setReservations([])),
         fetch(`${API_BASE}/client/membership`, { headers: h })
-          .then(r => r.json()).then(setMembership).catch(() => setMembership(null)),
+          .then(r => r.json()).then(data => setMembership(data && typeof data === "object" && data.id ? data : null)).catch(() => setMembership(null)),
       ]).finally(() => setLoadingRes(false));
     });
   }, [isSignedIn, getToken]);
@@ -100,7 +100,7 @@ export default function ClientDashboard() {
     getToken().then(token => {
       const h = token ? { Authorization: `Bearer ${token}` } : {};
       fetch(`${API_BASE}/client/payments`, { headers: h })
-        .then(r => r.json()).then(setPayments).catch(() => setPayments([]))
+        .then(r => r.json()).then(data => setPayments(Array.isArray(data) ? data : [])).catch(() => setPayments([]))
         .finally(() => setLoadingPayments(false));
     });
   }, [isSignedIn, section, getToken]);
