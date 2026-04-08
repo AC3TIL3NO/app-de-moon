@@ -34,7 +34,7 @@ function Router() {
         {user ? <Redirect to="/dashboard" /> : <Login />}
       </Route>
       <Route path="/">
-        <Redirect to="/dashboard" />
+        {user ? <Redirect to="/dashboard" /> : <Redirect to="/login" />}
       </Route>
       <Route>
         <ProtectedRoute>
