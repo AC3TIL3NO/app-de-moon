@@ -19,7 +19,7 @@ import { useAuth } from "@/contexts/auth";
 import {
   Save, Building2, Palette, CreditCard, Plus, Trash2,
   GripVertical, Image, Phone, Mail, MapPin, FileText, Tag, Lock,
-  Users, UserPlus, ShieldCheck, Headphones,
+  Users, UserPlus, ShieldCheck, Headphones, Pencil,
 } from "lucide-react";
 
 const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates-studio$/, "") + "/api";
@@ -711,10 +711,16 @@ function UsersCard() {
   const { user: me } = useAuth();
   const [users, setUsers] = useState<StaffUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
-  const [deleting, setDeleting] = useState<number | null>(null);
+
+  const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "RECEPTIONIST" });
   const [saving, setSaving] = useState(false);
+
+  const [editTarget, setEditTarget] = useState<StaffUser | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", email: "", role: "", password: "" });
+  const [editSaving, setEditSaving] = useState(false);
+
+  const [deleting, setDeleting] = useState<number | null>(null);
 
   const token = localStorage.getItem("pilates_token");
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
@@ -730,6 +736,11 @@ function UsersCard() {
   }, []);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+  function openEdit(u: StaffUser) {
+    setEditTarget(u);
+    setEditForm({ name: u.name, email: u.email, role: u.role, password: "" });
+  }
 
   async function createUser() {
     if (!form.name || !form.email || !form.password) {
@@ -749,11 +760,43 @@ function UsersCard() {
         return;
       }
       toast({ title: "Usuario creado correctamente." });
-      setOpen(false);
+      setCreateOpen(false);
       setForm({ name: "", email: "", password: "", role: "RECEPTIONIST" });
       fetchUsers();
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function saveEdit() {
+    if (!editTarget) return;
+    if (!editForm.name || !editForm.email) {
+      toast({ title: "Nombre y correo son requeridos.", variant: "destructive" });
+      return;
+    }
+    setEditSaving(true);
+    const body: Record<string, string> = {
+      name: editForm.name,
+      email: editForm.email,
+      role: editForm.role,
+    };
+    if (editForm.password) body.password = editForm.password;
+    try {
+      const res = await fetch(`${API_BASE}/users/${editTarget.id}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        toast({ title: err.error ?? "Error al actualizar.", variant: "destructive" });
+        return;
+      }
+      toast({ title: "Usuario actualizado correctamente." });
+      setEditTarget(null);
+      fetchUsers();
+    } finally {
+      setEditSaving(false);
     }
   }
 
@@ -773,6 +816,28 @@ function UsersCard() {
     }
   }
 
+  const RoleSelect = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="rounded-xl">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="RECEPTIONIST">
+          <div className="flex items-center gap-2">
+            <Headphones className="h-3.5 w-3.5 text-blue-500" />
+            Recepcionista
+          </div>
+        </SelectItem>
+        <SelectItem value="ADMIN">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+            Administrador
+          </div>
+        </SelectItem>
+      </SelectContent>
+    </Select>
+  );
+
   return (
     <Card className="shadow-sm border-border/50">
       <CardHeader className="flex flex-row items-center gap-3 pb-4">
@@ -781,9 +846,10 @@ function UsersCard() {
         </div>
         <div className="flex-1">
           <CardTitle className="text-base">Gestión de Usuarios</CardTitle>
-          <CardDescription>Agrega o elimina recepcionistas y administradores.</CardDescription>
+          <CardDescription>Crea, edita o elimina recepcionistas y administradores.</CardDescription>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-2 rounded-xl">
               <UserPlus className="h-4 w-4" />
@@ -823,25 +889,7 @@ function UsersCard() {
               </div>
               <div className="space-y-1.5">
                 <Label>Rol</Label>
-                <Select value={form.role} onValueChange={v => setForm(f => ({ ...f, role: v }))}>
-                  <SelectTrigger className="rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="RECEPTIONIST">
-                      <div className="flex items-center gap-2">
-                        <Headphones className="h-3.5 w-3.5 text-blue-500" />
-                        Recepcionista
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="ADMIN">
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-                        Administrador
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                <RoleSelect value={form.role} onChange={v => setForm(f => ({ ...f, role: v }))} />
               </div>
               <Button className="w-full gap-2 rounded-xl" onClick={createUser} disabled={saving}>
                 <UserPlus className="h-4 w-4" />
@@ -851,6 +899,50 @@ function UsersCard() {
           </DialogContent>
         </Dialog>
       </CardHeader>
+
+      {/* Edit dialog (controlled outside card header) */}
+      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar Usuario</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Nombre completo</Label>
+              <Input
+                value={editForm.name}
+                onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Correo electrónico</Label>
+              <Input
+                type="email"
+                value={editForm.email}
+                onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Rol</Label>
+              <RoleSelect value={editForm.role} onChange={v => setEditForm(f => ({ ...f, role: v }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Nueva contraseña</Label>
+              <Input
+                type="password"
+                placeholder="Dejar vacío para no cambiar"
+                value={editForm.password}
+                onChange={e => setEditForm(f => ({ ...f, password: e.target.value }))}
+              />
+            </div>
+            <Button className="w-full gap-2 rounded-xl" onClick={saveEdit} disabled={editSaving}>
+              <Save className="h-4 w-4" />
+              {editSaving ? "Guardando..." : "Guardar Cambios"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <CardContent>
         {loading ? (
           <div className="space-y-3">
@@ -881,10 +973,18 @@ function UsersCard() {
                     <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0 ml-3">
+                <div className="flex items-center gap-1.5 shrink-0 ml-3">
                   <Badge variant="secondary" className={`text-xs ${ROLE_COLORS[u.role]}`}>
                     {ROLE_LABELS[u.role]}
                   </Badge>
+                  <button
+                    onClick={() => openEdit(u)}
+                    className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    title="Editar usuario"
+                    aria-label={`Editar ${u.name}`}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
                   {u.id !== me?.id && (
                     <button
                       onClick={() => deleteUser(u.id)}

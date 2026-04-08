@@ -75,8 +75,9 @@ router.post("/users", requireAuth, requireRole("ADMIN"), async (req, res): Promi
 
 router.patch("/users/:id", requireAuth, requireRole("ADMIN"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
-  const { name, role, password } = req.body as {
+  const { name, email, role, password } = req.body as {
     name?: string;
+    email?: string;
     role?: string;
     password?: string;
   };
@@ -86,8 +87,21 @@ router.patch("/users/:id", requireAuth, requireRole("ADMIN"), async (req, res): 
     return;
   }
 
-  const updates: Partial<{ name: string; role: string; passwordHash: string }> = {};
+  const updates: Partial<{ name: string; email: string; role: string; passwordHash: string }> = {};
   if (name) updates.name = name;
+  if (email) {
+    const emailLower = email.toLowerCase();
+    const existing = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.email, emailLower))
+      .limit(1);
+    if (existing.length > 0 && existing[0].id !== id) {
+      res.status(409).json({ error: "Ya existe un usuario con ese correo" });
+      return;
+    }
+    updates.email = emailLower;
+  }
   if (role) {
     const validRoles = ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"];
     if (!validRoles.includes(role)) {
