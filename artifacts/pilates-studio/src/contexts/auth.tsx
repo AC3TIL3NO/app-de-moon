@@ -14,6 +14,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   token: string | null;
   isLoading: boolean;
+  isVerifying: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -25,15 +26,37 @@ const USER_KEY = "pilates_user";
 const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates-studio$/, "") + "/api";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    const raw = localStorage.getItem(USER_KEY);
-    return raw ? JSON.parse(raw) : null;
-  });
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true);
 
   useEffect(() => {
     setAuthTokenGetter(() => localStorage.getItem(TOKEN_KEY));
+
+    const storedToken = localStorage.getItem(TOKEN_KEY);
+    if (!storedToken) {
+      setIsVerifying(false);
+      return;
+    }
+
+    fetch(`${API_BASE}/auth/me`, {
+      headers: { Authorization: `Bearer ${storedToken}` },
+    })
+      .then(async res => {
+        if (!res.ok) throw new Error("invalid");
+        const data = await res.json() as AuthUser;
+        localStorage.setItem(USER_KEY, JSON.stringify(data));
+        setToken(storedToken);
+        setUser(data);
+      })
+      .catch(() => {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(USER_KEY);
+        setToken(null);
+        setUser(null);
+      })
+      .finally(() => setIsVerifying(false));
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -68,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, isVerifying, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

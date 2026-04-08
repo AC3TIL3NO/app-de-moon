@@ -16,17 +16,25 @@ import Payments from "@/pages/payments";
 
 const queryClient = new QueryClient();
 
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+    </div>
+  );
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const [location] = useLocation();
-  if (!user) {
-    return <Redirect to="/login" />;
-  }
+  const { user, isVerifying } = useAuth();
+  if (isVerifying) return <LoadingScreen />;
+  if (!user) return <Redirect to="/login" />;
   return <>{children}</>;
 }
 
 function Router() {
-  const { user } = useAuth();
+  const { user, isVerifying } = useAuth();
+
+  if (isVerifying) return <LoadingScreen />;
 
   return (
     <Switch>
