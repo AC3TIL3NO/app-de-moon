@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { db } from "@workspace/db";
 import { clientsTable, reservationsTable, classesTable, clientMembershipsTable, instructorsTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, ne } from "drizzle-orm";
 import { getAuth, clerkClient } from "@clerk/express";
 
 const router: IRouter = Router();
@@ -89,14 +89,36 @@ router.patch("/client/profile", requireClientAuth, async (req, res): Promise<voi
   const name = [firstName.trim(), (lastName ?? "").trim()].filter(Boolean).join(" ");
   const normalizedPhone = phone.trim();
 
-  const updated = await db
-    .update(clientsTable)
-    .set({ name, phone: normalizedPhone })
-    .where(eq(clientsTable.id, clientId))
-    .returning();
+  // Check if phone is already used by a different client
+  if (normalizedPhone) {
+    const existingWithPhone = await db
+      .select({ id: clientsTable.id })
+      .from(clientsTable)
+      .where(and(eq(clientsTable.phone, normalizedPhone), ne(clientsTable.id, clientId)))
+      .limit(1);
+    if (existingWithPhone.length > 0) {
+      res.status(409).json({ error: "Este número de celular ya está registrado en otra cuenta" });
+      return;
+    }
+  }
 
-  const c = updated[0]!;
-  res.json({ id: c.id, name: c.name, email: c.email, phone: c.phone, plan: c.plan, classesRemaining: c.classesRemaining });
+  try {
+    const updated = await db
+      .update(clientsTable)
+      .set({ name, phone: normalizedPhone })
+      .where(eq(clientsTable.id, clientId))
+      .returning();
+
+    const c = updated[0]!;
+    res.json({ id: c.id, name: c.name, email: c.email, phone: c.phone, plan: c.plan, classesRemaining: c.classesRemaining });
+  } catch (err: any) {
+    // Handle DB-level unique constraint violation
+    if (err?.code === "23505" && err?.constraint?.includes("phone")) {
+      res.status(409).json({ error: "Este número de celular ya está registrado en otra cuenta" });
+      return;
+    }
+    throw err;
+  }
 });
 
 // GET /api/client/me
