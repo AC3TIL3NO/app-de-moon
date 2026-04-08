@@ -8,8 +8,9 @@ import {
   membershipsTable,
   clientsTable,
   clientMembershipsTable,
+  reservationsTable,
 } from "@workspace/db";
-import { eq, notInArray } from "drizzle-orm";
+import { eq, notInArray, inArray } from "drizzle-orm";
 import { logger } from "./lib/logger";
 
 const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -262,100 +263,26 @@ export async function seedDatabase(): Promise<void> {
       logger.info("seed: classes already exist");
     }
 
-    // ─── 9. Demo clients ─────────────────────────────────────────────────────
-    const existingClients = await db.select().from(clientsTable).limit(1);
+    // ─── 9. Remove legacy demo clients (@demo.com) ───────────────────────────
+    const DEMO_EMAILS = [
+      "maria.hernandez@demo.com",
+      "laura.sanchez@demo.com",
+      "diana.torres@demo.com",
+      "ana.garcia@demo.com",
+      "maria.lopez@demo.com",
+      "alejandra.ruiz@demo.com",
+    ];
+    const demoClients = await db
+      .select({ id: clientsTable.id })
+      .from(clientsTable)
+      .where(inArray(clientsTable.email, DEMO_EMAILS));
 
-    let clientIds: Record<string, number> = {};
-
-    if (existingClients.length === 0) {
-      logger.info("seed: creating demo clients...");
-      const DEMO_CLIENTS = [
-        { name: "María Hernández", email: "maria.hernandez@demo.com", phone: "+507 6000-0001", plan: "Mensual" as const, classesRemaining: 0 },
-        { name: "Laura Sánchez",   email: "laura.sanchez@demo.com",   phone: "+507 6000-0002", plan: "Mensual" as const, classesRemaining: 0 },
-        { name: "Diana Torres",    email: "diana.torres@demo.com",    phone: "+507 6000-0003", plan: "Mensual" as const, classesRemaining: 0 },
-        { name: "Ana García",      email: "ana.garcia@demo.com",      phone: "+507 6000-0004", plan: "Mensual" as const, classesRemaining: 0 },
-        { name: "María López",     email: "maria.lopez@demo.com",     phone: "+507 6000-0005", plan: "Mensual" as const, classesRemaining: 0 },
-        { name: "Alejandra Ruiz",  email: "alejandra.ruiz@demo.com",  phone: "+507 6000-0006", plan: "Por Clase" as const, classesRemaining: 3 },
-      ];
-      const inserted = await db.insert(clientsTable).values(DEMO_CLIENTS).returning({ id: clientsTable.id, name: clientsTable.name });
-      for (const c of inserted) clientIds[c.name] = c.id;
-      logger.info({ count: inserted.length }, "seed: demo clients created");
-    } else {
-      // Map existing clients by name for membership seeding
-      const allClients = await db.select({ id: clientsTable.id, name: clientsTable.name }).from(clientsTable);
-      for (const c of allClients) clientIds[c.name] = c.id;
-      logger.info("seed: clients already exist");
-    }
-
-    // ─── 10. Demo client memberships ─────────────────────────────────────────
-    const existingCM = await db.select().from(clientMembershipsTable).limit(1);
-
-    if (existingCM.length === 0) {
-      // Get plan IDs
-      const allPlans = await db.select({ id: membershipsTable.id, name: membershipsTable.name }).from(membershipsTable);
-      const planByName = Object.fromEntries(allPlans.map(p => [p.name, p.id]));
-
-      const today = new Date();
-      const fmt = (d: Date) => d.toISOString().split("T")[0]!;
-      const addDays = (d: Date, n: number) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
-
-      const mariasLopezId  = clientIds["María López"];
-      const lauraSanchezId = clientIds["Laura Sánchez"];
-      const dianaTorresId  = clientIds["Diana Torres"];
-      const plusPlanId     = planByName["Pilates Plus"];
-      const basicoPlanId   = planByName["Pilates Básico"];
-      const premiumPlanId  = planByName["Pilates Premium"];
-
-      const membershipsToInsert = [];
-
-      if (mariasLopezId && plusPlanId) {
-        membershipsToInsert.push({
-          clientId: mariasLopezId,
-          membershipId: plusPlanId,
-          membershipName: "Pilates Plus",
-          clientName: "María López",
-          startDate: fmt(addDays(today, -15)),
-          endDate: fmt(addDays(today, 15)),
-          classesUsed: 5,
-          classesTotal: 8,
-          status: "Activa" as const,
-        });
-      }
-
-      if (lauraSanchezId && basicoPlanId) {
-        membershipsToInsert.push({
-          clientId: lauraSanchezId,
-          membershipId: basicoPlanId,
-          membershipName: "Pilates Básico",
-          clientName: "Laura Sánchez",
-          startDate: fmt(addDays(today, -30)),
-          endDate: fmt(addDays(today, -16)),
-          classesUsed: 4,
-          classesTotal: 4,
-          status: "Agotada" as const,
-        });
-      }
-
-      if (dianaTorresId && premiumPlanId) {
-        membershipsToInsert.push({
-          clientId: dianaTorresId,
-          membershipId: premiumPlanId,
-          membershipName: "Pilates Premium",
-          clientName: "Diana Torres",
-          startDate: fmt(addDays(today, -45)),
-          endDate: fmt(addDays(today, -15)),
-          classesUsed: 3,
-          classesTotal: 12,
-          status: "Vencida" as const,
-        });
-      }
-
-      if (membershipsToInsert.length > 0) {
-        await db.insert(clientMembershipsTable).values(membershipsToInsert);
-        logger.info({ count: membershipsToInsert.length }, "seed: demo memberships created");
-      }
-    } else {
-      logger.info("seed: client memberships already exist");
+    if (demoClients.length > 0) {
+      const demoIds = demoClients.map(c => c.id);
+      await db.delete(reservationsTable).where(inArray(reservationsTable.clientId, demoIds));
+      await db.delete(clientMembershipsTable).where(inArray(clientMembershipsTable.clientId, demoIds));
+      await db.delete(clientsTable).where(inArray(clientsTable.id, demoIds));
+      logger.info({ count: demoIds.length }, "seed: removed legacy demo clients");
     }
 
     logger.info("seed: done");
