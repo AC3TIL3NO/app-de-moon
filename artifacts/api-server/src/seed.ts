@@ -28,10 +28,10 @@ const VALID_TYPES = ["Reformer", "Mat", "Privada"] as const;
 const VALID_LEVELS = ["Principiante", "Intermedio", "Avanzado"] as const;
 const CLASS_NAMES = ["Pilates Reformer", "Pilates Mat", "Clase Privada"];
 
-// Lunes–Sábado, 10 slots por día (10:00–19:00)
+// Lunes–Sábado, 9 slots por día (10:00–18:00)
 const ALL_SLOTS = [
   "10:00", "11:00", "12:00", "13:00", "14:00",
-  "15:00", "16:00", "17:00", "18:00", "19:00",
+  "15:00", "16:00", "17:00", "18:00",
 ];
 
 // Sun=0, Mon=1, ..., Sat=6  — excluimos Domingo (0)
