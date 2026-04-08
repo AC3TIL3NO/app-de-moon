@@ -27,7 +27,7 @@ import studioBg from "@assets/40b756_4f1dc1bd9ca941efa4af8c07e580dd1b~mv2_177550
 import logoBlack from "@assets/Moon_Pilates_Studio_Logo_TEXTO_NEGRO_1775503679484.png";
 import studioVideo1 from "@assets/SaveClip.App_AQPAckGAJnE1YTcWTONhSiHHlu6nlJ_D6F5PKxkAx3PK0NqsY_1775523267244.mp4";
 import studioVideo2 from "@assets/SaveClip.App_AQPxkzPBIp53uUbHiaI0ROdTmasQyIvq6OrYuRNUFT4AmYBkf_1775523272265.mp4";
-import { useUser } from "@clerk/react";
+import { useUser, useClerk } from "@clerk/react";
 import { BookingModal } from "@/components/BookingModal";
 import { PaymentModal } from "@/components/PaymentModal";
 
@@ -290,7 +290,10 @@ export default function LandingPage() {
   const [selectedPlan, setSelectedPlan] = useState<PlanCard | null>(null);
   const [plans, setPlans] = useState<PlanCard[]>([]);
   const { user, isSignedIn } = useUser();
+  const { openSignIn } = useClerk();
   const [, navigate] = useLocation();
+  const basePath = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+  const handleSignIn = () => openSignIn({ redirectUrl: `${basePath}/dashboard` });
 
   useEffect(() => {
     fetch(`${API_BASE}/memberships`)
@@ -333,13 +336,13 @@ export default function LandingPage() {
       setPreselectedClass(className ? { name: className } : null);
       setBookingOpen(true);
     } else {
-      navigate("/sign-in");
+      handleSignIn();
     }
   };
 
   const handleComprarPaquete = (plan: PlanCard) => {
     if (!isSignedIn) {
-      navigate("/sign-in");
+      handleSignIn();
       return;
     }
     setSelectedPlan(plan);
@@ -408,7 +411,7 @@ export default function LandingPage() {
             ) : (
               <>
                 <motion.button
-                  onClick={() => navigate("/sign-in")}
+                  onClick={handleSignIn}
                   whileHover={{ scale: 1.03 }}
                   className={`text-sm font-medium px-4 py-2 rounded-xl transition-colors ${scrolled ? "text-gray-700 hover:bg-gray-100" : "text-white/80 hover:bg-white/10"}`}
                 >
@@ -1286,7 +1289,7 @@ export default function LandingPage() {
         isOpen={bookingOpen}
         onClose={() => setBookingOpen(false)}
         preselectedClass={preselectedClass}
-        onNeedAuth={() => { setBookingOpen(false); navigate("/sign-in"); }}
+        onNeedAuth={() => { setBookingOpen(false); handleSignIn(); }}
         onSuccess={() => {
           setBookingOpen(false);
           showToast("Reserva confirmada. Te esperamos en Moon Pilates Studio.");
