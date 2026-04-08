@@ -3,12 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import {
   Calendar, CreditCard, User, History, Receipt,
-  LogOut, ChevronRight, Clock, CheckCircle2,
+  LogOut, Clock, CheckCircle2,
   XCircle, AlertCircle, Menu, X, Zap, Star, DollarSign
 } from "lucide-react";
-import { useClientAuth, getClientAuthHeaders, API_BASE } from "@/contexts/clientAuth";
+import { useUser, useAuth, useClerk } from "@clerk/react";
+import { useClientContext } from "@/contexts/clientContext";
+import { API_BASE } from "@/lib/api";
 import { BookingModal } from "@/components/BookingModal";
-import { AuthModal } from "@/components/AuthModal";
 
 const NAV_ITEMS = [
   { id: "reservas", icon: Calendar, label: "Mis Reservas" },
@@ -56,7 +57,10 @@ const STATUS_STYLE: Record<string, string> = {
 };
 
 export default function ClientDashboard() {
-  const { client, token, logout } = useClientAuth();
+  const { isLoaded, isSignedIn } = useUser();
+  const { getToken } = useAuth();
+  const { signOut } = useClerk();
+  const { client } = useClientContext();
   const [, navigate] = useLocation();
   const [section, setSection] = useState("reservas");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -64,34 +68,41 @@ export default function ClientDashboard() {
   const [membership, setMembership] = useState<Membership | null>(null);
   const [loadingRes, setLoadingRes] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
 
   useEffect(() => {
-    if (!token) { navigate("/"); }
-  }, [token]);
+    if (isLoaded && !isSignedIn) {
+      navigate("/");
+    }
+  }, [isLoaded, isSignedIn]);
 
   useEffect(() => {
-    if (!token) return;
+    if (!isSignedIn) return;
     setLoadingRes(true);
-    Promise.all([
-      fetch(`${API_BASE}/client/reservations`, { headers: getClientAuthHeaders() })
-        .then(r => r.json()).then(setReservations).catch(() => setReservations([])),
-      fetch(`${API_BASE}/client/membership`, { headers: getClientAuthHeaders() })
-        .then(r => r.json()).then(setMembership).catch(() => setMembership(null)),
-    ]).finally(() => setLoadingRes(false));
-  }, [token]);
+    getToken().then(token => {
+      const h = token ? { Authorization: `Bearer ${token}` } : {};
+      Promise.all([
+        fetch(`${API_BASE}/client/reservations`, { headers: h })
+          .then(r => r.json()).then(setReservations).catch(() => setReservations([])),
+        fetch(`${API_BASE}/client/membership`, { headers: h })
+          .then(r => r.json()).then(setMembership).catch(() => setMembership(null)),
+      ]).finally(() => setLoadingRes(false));
+    });
+  }, [isSignedIn, getToken]);
 
   useEffect(() => {
-    if (!token || section !== "pagos") return;
+    if (!isSignedIn || section !== "pagos") return;
     setLoadingPayments(true);
-    fetch(`${API_BASE}/client/payments`, { headers: getClientAuthHeaders() })
-      .then(r => r.json()).then(setPayments).catch(() => setPayments([]))
-      .finally(() => setLoadingPayments(false));
-  }, [token, section]);
+    getToken().then(token => {
+      const h = token ? { Authorization: `Bearer ${token}` } : {};
+      fetch(`${API_BASE}/client/payments`, { headers: h })
+        .then(r => r.json()).then(setPayments).catch(() => setPayments([]))
+        .finally(() => setLoadingPayments(false));
+    });
+  }, [isSignedIn, section, getToken]);
 
   const showToast = (msg: string, type: "success" | "error" = "success") => {
     setToast({ msg, type });
@@ -101,9 +112,10 @@ export default function ClientDashboard() {
   const handleCancel = async (id: number) => {
     setCancellingId(id);
     try {
+      const token = await getToken();
       const res = await fetch(`${API_BASE}/client/reservations/${id}`, {
         method: "DELETE",
-        headers: getClientAuthHeaders(),
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) throw new Error("Error al cancelar");
       setReservations(prev => prev.map(r => r.id === id ? { ...r, status: "Cancelada" } : r));
@@ -116,8 +128,7 @@ export default function ClientDashboard() {
   };
 
   const handleLogout = () => {
-    logout();
-    navigate("/");
+    signOut(() => navigate("/"));
   };
 
   const upcoming = reservations.filter(r => r.status === "Confirmada" && r.date >= new Date().toISOString().slice(0, 10));
@@ -127,7 +138,11 @@ export default function ClientDashboard() {
     ? membership.classesTotal === -1 ? 100 : Math.round((membership.classesUsed / membership.classesTotal) * 100)
     : 0;
 
-  if (!client) return null;
+  if (!isLoaded || !client) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="h-8 w-8 rounded-full border-2 border-gray-300 border-t-gray-900 animate-spin" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 font-inter flex">
@@ -146,7 +161,7 @@ export default function ClientDashboard() {
         {/* Logo */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-violet-600 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-lg bg-[#C49A1E] flex items-center justify-center">
               <Zap className="h-4 w-4 text-white" />
             </div>
             <div>
@@ -164,8 +179,8 @@ export default function ClientDashboard() {
           {NAV_ITEMS.map(item => (
             <button key={item.id} onClick={() => { setSection(item.id); setSidebarOpen(false); }}
               className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all
-                ${section === item.id ? "bg-violet-50 text-violet-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}>
-              <item.icon className={`h-4 w-4 ${section === item.id ? "text-violet-600" : "text-gray-400"}`} />
+                ${section === item.id ? "bg-amber-50 text-[#C49A1E]" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}>
+              <item.icon className={`h-4 w-4 ${section === item.id ? "text-[#C49A1E]" : "text-gray-400"}`} />
               {item.label}
             </button>
           ))}
@@ -174,7 +189,7 @@ export default function ClientDashboard() {
         {/* User + Logout */}
         <div className="px-4 py-4 border-t border-gray-100 space-y-2">
           <div className="flex items-center gap-3 px-3 py-2">
-            <div className="h-8 w-8 rounded-full bg-violet-100 flex items-center justify-center text-violet-700 font-bold text-sm">
+            <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center text-[#C49A1E] font-bold text-sm">
               {client.name.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
@@ -203,7 +218,7 @@ export default function ClientDashboard() {
             </div>
           </div>
           <button onClick={() => setBookingOpen(true)}
-            className="h-9 px-4 bg-violet-600 text-white text-sm font-semibold rounded-xl hover:bg-violet-700 transition-colors">
+            className="h-9 px-4 bg-[#C49A1E] text-white text-sm font-semibold rounded-xl hover:bg-[#b08a18] transition-colors">
             Reservar clase
           </button>
         </header>
@@ -215,7 +230,7 @@ export default function ClientDashboard() {
             <div className="space-y-6 max-w-3xl">
               <div className="grid grid-cols-3 gap-4">
                 {[
-                  { label: "Próximas clases", value: upcoming.length, color: "violet" },
+                  { label: "Próximas clases", value: upcoming.length, color: "amber" },
                   { label: "Clases asistidas", value: reservations.filter(r => r.attended).length, color: "emerald" },
                   { label: "Canceladas", value: reservations.filter(r => r.status === "Cancelada").length, color: "rose" },
                 ].map(stat => (
@@ -238,7 +253,7 @@ export default function ClientDashboard() {
                     <Calendar className="h-10 w-10 text-gray-200 mx-auto mb-3" />
                     <p className="text-sm text-gray-400 mb-4">No tienes clases próximas</p>
                     <button onClick={() => setBookingOpen(true)}
-                      className="px-5 h-9 bg-violet-600 text-white text-sm font-semibold rounded-xl hover:bg-violet-700 transition-colors">
+                      className="px-5 h-9 bg-[#C49A1E] text-white text-sm font-semibold rounded-xl hover:bg-[#b08a18] transition-colors">
                       Reservar ahora
                     </button>
                   </div>
@@ -246,8 +261,8 @@ export default function ClientDashboard() {
                   <div className="divide-y divide-gray-50">
                     {upcoming.map(r => (
                       <div key={r.id} className="flex items-center gap-4 px-5 py-4">
-                        <div className="h-10 w-10 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
-                          <Calendar className="h-4.5 w-4.5 text-violet-600" />
+                        <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                          <Calendar className="h-4.5 w-4.5 text-[#C49A1E]" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-gray-900 text-sm">{r.className}</div>
@@ -273,12 +288,12 @@ export default function ClientDashboard() {
             <div className="max-w-2xl space-y-5">
               {membership ? (
                 <>
-                  <div className="bg-gradient-to-br from-violet-600 to-violet-700 rounded-3xl p-6 text-white">
+                  <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-6 text-white">
                     <div className="flex items-start justify-between mb-6">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <Star className="h-4 w-4 text-violet-200" />
-                          <span className="text-violet-200 text-sm font-medium">Plan activo</span>
+                          <Star className="h-4 w-4 text-[#C49A1E]" />
+                          <span className="text-gray-300 text-sm font-medium">Plan activo</span>
                         </div>
                         <h2 className="text-2xl font-bold">{membership.membershipName}</h2>
                       </div>
@@ -286,20 +301,20 @@ export default function ClientDashboard() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-violet-200">Clases usadas</span>
+                        <span className="text-gray-300">Clases usadas</span>
                         <span className="font-semibold">
                           {membership.classesTotal === -1 ? `${membership.classesUsed} (ilimitadas)` : `${membership.classesUsed} / ${membership.classesTotal}`}
                         </span>
                       </div>
                       {membership.classesTotal !== -1 && (
                         <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                          <div className="h-full bg-white rounded-full transition-all" style={{ width: `${membershipProgress}%` }} />
+                          <div className="h-full bg-[#C49A1E] rounded-full transition-all" style={{ width: `${membershipProgress}%` }} />
                         </div>
                       )}
                     </div>
                     <div className="flex gap-4 mt-6 pt-4 border-t border-white/20 text-sm">
-                      <div><div className="text-violet-200 text-xs mb-0.5">Desde</div><div className="font-semibold">{membership.startDate}</div></div>
-                      <div><div className="text-violet-200 text-xs mb-0.5">Hasta</div><div className="font-semibold">{membership.endDate}</div></div>
+                      <div><div className="text-gray-300 text-xs mb-0.5">Desde</div><div className="font-semibold">{membership.startDate}</div></div>
+                      <div><div className="text-gray-300 text-xs mb-0.5">Hasta</div><div className="font-semibold">{membership.endDate}</div></div>
                     </div>
                   </div>
                   <div className="bg-white rounded-2xl border border-gray-100 p-5">
@@ -309,17 +324,17 @@ export default function ClientDashboard() {
                       { name: "Moon Flow", price: "B/.160", classes: "12 clases/mes", desc: "Ideal para progreso constante", popular: true },
                       { name: "Moon Unlimited", price: "B/.220", classes: "Ilimitadas", desc: "Incluye prioridad de reserva" },
                     ].map(plan => (
-                      <div key={plan.name} className={`flex items-center justify-between p-3 rounded-xl mb-2 ${plan.popular ? "bg-violet-50 border border-violet-100" : "hover:bg-gray-50"} transition-colors`}>
+                      <div key={plan.name} className={`flex items-center justify-between p-3 rounded-xl mb-2 ${plan.popular ? "bg-amber-50 border border-amber-100" : "hover:bg-gray-50"} transition-colors`}>
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-gray-900 text-sm">{plan.name}</span>
-                            {plan.popular && <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full font-medium">Popular</span>}
+                            {plan.popular && <span className="text-xs bg-amber-100 text-[#C49A1E] px-2 py-0.5 rounded-full font-medium">Popular</span>}
                           </div>
                           <div className="text-xs text-gray-400 mt-0.5">{plan.classes} · {plan.desc}</div>
                         </div>
                         <div className="text-right">
                           <div className="font-bold text-gray-900">{plan.price}</div>
-                          <button className="text-xs text-violet-600 font-semibold hover:underline mt-0.5">Cambiar</button>
+                          <button className="text-xs text-[#C49A1E] font-semibold hover:underline mt-0.5">Cambiar</button>
                         </div>
                       </div>
                     ))}
@@ -327,8 +342,8 @@ export default function ClientDashboard() {
                 </>
               ) : (
                 <div className="bg-white rounded-3xl border border-gray-100 p-8 text-center">
-                  <div className="h-16 w-16 rounded-2xl bg-violet-50 flex items-center justify-center mx-auto mb-4">
-                    <CreditCard className="h-8 w-8 text-violet-400" />
+                  <div className="h-16 w-16 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
+                    <CreditCard className="h-8 w-8 text-[#C49A1E]" />
                   </div>
                   <h3 className="font-bold text-gray-900 mb-2">Sin membresía activa</h3>
                   <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto">Adquiere un plan Moon para empezar a reservar tus clases de Pilates Reformer.</p>
@@ -338,15 +353,15 @@ export default function ClientDashboard() {
                       { name: "Moon Flow", price: "B/.160", classes: "12 clases al mes", popular: true },
                       { name: "Moon Unlimited", price: "B/.220", classes: "Ilimitadas" },
                     ].map(plan => (
-                      <div key={plan.name} className={`flex items-center justify-between p-4 rounded-2xl border text-left ${plan.popular ? "border-violet-200 bg-violet-50" : "border-gray-100"}`}>
+                      <div key={plan.name} className={`flex items-center justify-between p-4 rounded-2xl border text-left ${plan.popular ? "border-amber-200 bg-amber-50" : "border-gray-100"}`}>
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-gray-900 text-sm">{plan.name}</span>
-                            {plan.popular && <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full font-medium">Más popular</span>}
+                            {plan.popular && <span className="text-xs bg-amber-100 text-[#C49A1E] px-2 py-0.5 rounded-full font-medium">Más popular</span>}
                           </div>
                           <div className="text-xs text-gray-400 mt-0.5">{plan.classes}</div>
                         </div>
-                        <button className="h-9 px-4 bg-violet-600 text-white text-xs font-bold rounded-xl hover:bg-violet-700 transition-colors">
+                        <button className="h-9 px-4 bg-[#C49A1E] text-white text-xs font-bold rounded-xl hover:bg-[#b08a18] transition-colors">
                           {plan.price}
                         </button>
                       </div>
@@ -362,13 +377,13 @@ export default function ClientDashboard() {
             <div className="max-w-lg space-y-5">
               <div className="bg-white rounded-2xl border border-gray-100 p-6">
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="h-16 w-16 rounded-2xl bg-violet-100 flex items-center justify-center text-violet-700 font-bold text-2xl">
+                  <div className="h-16 w-16 rounded-2xl bg-amber-100 flex items-center justify-center text-[#C49A1E] font-bold text-2xl">
                     {client.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <div className="text-xl font-bold text-gray-900">{client.name}</div>
                     <div className="text-sm text-gray-400">{client.email}</div>
-                    {membership && <div className="text-xs bg-violet-100 text-violet-700 font-semibold px-2.5 py-0.5 rounded-full mt-1 inline-block">{membership.membershipName}</div>}
+                    {membership && <div className="text-xs bg-amber-100 text-[#C49A1E] font-semibold px-2.5 py-0.5 rounded-full mt-1 inline-block">{membership.membershipName}</div>}
                   </div>
                 </div>
                 <div className="space-y-3">
@@ -397,7 +412,7 @@ export default function ClientDashboard() {
             <div className="max-w-3xl space-y-5">
               <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                 <div className="px-5 py-4 border-b border-gray-50 flex items-center gap-2">
-                  <Receipt className="h-4 w-4 text-violet-500" />
+                  <Receipt className="h-4 w-4 text-[#C49A1E]" />
                   <span className="font-semibold text-gray-900 text-sm">Historial de pagos</span>
                 </div>
                 {loadingPayments ? (
@@ -427,7 +442,7 @@ export default function ClientDashboard() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="font-bold text-gray-900">${p.amount.toFixed(2)}</div>
+                          <div className="font-bold text-gray-900">B/. {p.amount.toFixed(2)}</div>
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
                             {p.status === "paid" ? "Pagado" : "Pendiente"}
                           </span>
@@ -438,7 +453,7 @@ export default function ClientDashboard() {
                 )}
               </div>
               <p className="text-xs text-gray-400 text-center px-4">
-                Los pagos en línea son procesados de forma segura por Stripe. Para comprobantes o recibos, escríbenos a moonpilatesstudiopty@gmail.com.
+                Los pagos en línea son procesados de forma segura. Para comprobantes o recibos, escríbenos a moonpilatesstudiopty@gmail.com.
               </p>
             </div>
           )}
@@ -500,14 +515,16 @@ export default function ClientDashboard() {
       <BookingModal
         isOpen={bookingOpen}
         onClose={() => setBookingOpen(false)}
-        onNeedAuth={() => { setBookingOpen(false); setAuthOpen(true); }}
+        onNeedAuth={() => setBookingOpen(false)}
         onSuccess={() => {
           setBookingOpen(false);
           showToast("Reserva confirmada correctamente");
-          fetch(`${API_BASE}/client/reservations`, { headers: getClientAuthHeaders() }).then(r => r.json()).then(setReservations);
+          getToken().then(token => {
+            const h = token ? { Authorization: `Bearer ${token}` } : {};
+            fetch(`${API_BASE}/client/reservations`, { headers: h }).then(r => r.json()).then(setReservations);
+          });
         }}
       />
-      <AuthModal isOpen={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 }

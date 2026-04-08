@@ -11,6 +11,7 @@ export const clientsTable = pgTable("clients", {
   classesRemaining: integer("classes_remaining").notNull().default(0),
   notes: text("notes"),
   passwordHash: text("password_hash"),
+  clerkUserId: text("clerk_user_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

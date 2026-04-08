@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Calendar, Clock, User, Users, CheckCircle2, ArrowRight, AlertCircle } from "lucide-react";
-import { useClientAuth, getClientAuthHeaders, API_BASE } from "@/contexts/clientAuth";
+import { useAuth, useUser } from "@clerk/react";
+import { API_BASE } from "@/lib/api";
 import heroBg from "@assets/40b756_86a22044bf6b4d728b69b627f57b50ec~mv2_1775503320084.avif";
 import studioBg from "@assets/40b756_4f1dc1bd9ca941efa4af8c07e580dd1b~mv2_1775503621543.avif";
 
@@ -35,7 +36,8 @@ const LEVELS: Record<string, string> = {
 };
 
 export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, onSuccess }: BookingModalProps) {
-  const { client } = useClientAuth();
+  const { user } = useUser();
+  const { getToken } = useAuth();
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [selected, setSelected] = useState<ClassItem | null>(null);
   const [date, setDate] = useState("");
@@ -54,11 +56,14 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
     setError("");
     setNoMembership(false);
 
-    fetch(`${API_BASE}/client/classes`, { headers: getClientAuthHeaders() })
-      .then(r => r.json())
-      .then((data: ClassItem[]) => setClasses(data))
-      .catch(() => setClasses([]))
-      .finally(() => setLoadingClasses(false));
+    getToken().then(token => {
+      const h = token ? { Authorization: `Bearer ${token}` } : {};
+      fetch(`${API_BASE}/client/classes`, { headers: h })
+        .then(r => r.json())
+        .then((data: ClassItem[]) => setClasses(data))
+        .catch(() => setClasses([]))
+        .finally(() => setLoadingClasses(false));
+    });
   }, [isOpen]);
 
   const handleSelectClass = (cls: ClassItem) => {
@@ -68,13 +73,17 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
   };
 
   const handleConfirm = async () => {
-    if (!selected || !date || !client) return;
+    if (!selected || !date) return;
     setLoading(true);
     setError("");
     try {
+      const token = await getToken();
       const res = await fetch(`${API_BASE}/client/reserve`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getClientAuthHeaders() },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ classId: selected.id, date }),
       });
       if (!res.ok) {
@@ -117,7 +126,7 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
                 <h2 className="text-lg font-bold text-gray-900">
                   {step === "select" ? "Elige una clase" : step === "confirm" ? "Confirmar reserva" : "Reserva confirmada"}
                 </h2>
-                {client && <p className="text-sm text-gray-400 mt-0.5">Hola, {client.name.split(" ")[0]}</p>}
+                {user && <p className="text-sm text-gray-400 mt-0.5">Hola, {user.firstName || user.fullName?.split(" ")[0] || ""}!</p>}
               </div>
               <button onClick={onClose} className="h-9 w-9 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors">
                 <X className="h-4 w-4" />
@@ -144,7 +153,7 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
                         onClick={() => handleSelectClass(cls)}
-                        className="w-full flex items-start gap-4 p-3 rounded-2xl border border-gray-100 hover:border-violet-200 hover:shadow-md transition-all text-left group overflow-hidden"
+                        className="w-full flex items-start gap-4 p-3 rounded-2xl border border-gray-100 hover:border-amber-200 hover:shadow-md transition-all text-left group overflow-hidden"
                       >
                         <div className="h-16 w-20 rounded-xl overflow-hidden shrink-0 relative">
                           <img
@@ -165,7 +174,7 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
                             <span className="flex items-center gap-1"><Users className="h-3 w-3" />{cls.capacity - cls.enrolled} cupos</span>
                           </div>
                         </div>
-                        <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-violet-500 transition-colors shrink-0 mt-4" />
+                        <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-[#C49A1E] transition-colors shrink-0 mt-4" />
                       </motion.button>
                     ))
                   )}
@@ -175,7 +184,7 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
               {/* Step: Confirm */}
               {step === "confirm" && selected && (
                 <div className="space-y-5">
-                  <div className="rounded-2xl overflow-hidden border border-violet-100">
+                  <div className="rounded-2xl overflow-hidden border border-amber-100">
                     <div className="relative h-32">
                       <img
                         src={CLASS_PHOTOS[selected.id % CLASS_PHOTOS.length]}
@@ -186,12 +195,12 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
                       <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
                         <div>
                           <div className="font-bold text-white text-base leading-tight">{selected.name}</div>
-                          <div className="text-violet-300 text-xs font-medium mt-0.5">{selected.type} · {selected.level}</div>
+                          <div className="text-amber-300 text-xs font-medium mt-0.5">{selected.type} · {selected.level}</div>
                         </div>
                         <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${LEVELS[selected.level] ?? "bg-gray-100 text-gray-700"}`}>{selected.level}</span>
                       </div>
                     </div>
-                    <div className="bg-violet-50 p-4 space-y-3">
+                    <div className="bg-amber-50 p-4 space-y-3">
                     <div className="grid grid-cols-2 gap-3 pt-1">
                       {[
                         { icon: Clock, label: "Hora", value: selected.time },
@@ -201,7 +210,7 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
                       ].map(item => (
                         <div key={item.label} className="bg-white rounded-xl p-3">
                           <div className="flex items-center gap-1.5 mb-1">
-                            <item.icon className="h-3.5 w-3.5 text-violet-500" />
+                            <item.icon className="h-3.5 w-3.5 text-[#C49A1E]" />
                             <span className="text-xs text-gray-400 font-medium">{item.label}</span>
                           </div>
                           <div className="text-sm font-semibold text-gray-900">{item.value}</div>
@@ -218,7 +227,7 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
                       value={date}
                       onChange={e => setDate(e.target.value)}
                       min={new Date().toISOString().slice(0, 10)}
-                      className="w-full h-11 px-4 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
+                      className="w-full h-11 px-4 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 transition-all"
                     />
                   </div>
 
@@ -246,7 +255,7 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
                       Cambiar clase
                     </button>
                     <button onClick={handleConfirm} disabled={loading || !date || spots <= 0}
-                      className="flex-1 h-11 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+                      className="flex-1 h-11 rounded-xl bg-[#C49A1E] text-white text-sm font-semibold hover:bg-[#b08a18] transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
                       {loading ? "Reservando..." : <><span>Confirmar</span><CheckCircle2 className="h-4 w-4" /></>}
                     </button>
                   </div>
@@ -275,7 +284,7 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
                     </button>
                     <button
                       onClick={() => { onClose(); window.location.href = (import.meta.env.BASE_URL ?? "/landing/") + "dashboard"; }}
-                      className="flex-1 h-11 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 transition-colors">
+                      className="flex-1 h-11 rounded-xl bg-[#C49A1E] text-white text-sm font-semibold hover:bg-[#b08a18] transition-colors">
                       Ver mis reservas
                     </button>
                   </div>

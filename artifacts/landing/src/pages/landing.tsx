@@ -27,8 +27,7 @@ import studioBg from "@assets/40b756_4f1dc1bd9ca941efa4af8c07e580dd1b~mv2_177550
 import logoBlack from "@assets/Moon_Pilates_Studio_Logo_TEXTO_NEGRO_1775503679484.png";
 import studioVideo1 from "@assets/SaveClip.App_AQPAckGAJnE1YTcWTONhSiHHlu6nlJ_D6F5PKxkAx3PK0NqsY_1775523267244.mp4";
 import studioVideo2 from "@assets/SaveClip.App_AQPxkzPBIp53uUbHiaI0ROdTmasQyIvq6OrYuRNUFT4AmYBkf_1775523272265.mp4";
-import { useClientAuth } from "@/contexts/clientAuth";
-import { AuthModal } from "@/components/AuthModal";
+import { useUser } from "@clerk/react";
 import { BookingModal } from "@/components/BookingModal";
 import { PaymentModal } from "@/components/PaymentModal";
 
@@ -284,15 +283,13 @@ function CardIcons({ dark = false }: { dark?: boolean }) {
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [preselectedClass, setPreselectedClass] = useState<{ name: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PlanCard | null>(null);
-  const [pendingPlan, setPendingPlan] = useState<PlanCard | null>(null);
   const [plans, setPlans] = useState<PlanCard[]>([]);
-  const { client } = useClientAuth();
+  const { user, isSignedIn } = useUser();
   const [, navigate] = useLocation();
 
   useEffect(() => {
@@ -332,18 +329,17 @@ export default function LandingPage() {
   };
 
   const handleReservar = (className?: string) => {
-    if (client) {
+    if (isSignedIn) {
       setPreselectedClass(className ? { name: className } : null);
       setBookingOpen(true);
     } else {
-      setAuthOpen(true);
+      navigate("/sign-in");
     }
   };
 
   const handleComprarPaquete = (plan: PlanCard) => {
-    if (!client) {
-      setPendingPlan(plan);
-      setAuthOpen(true);
+    if (!isSignedIn) {
+      navigate("/sign-in");
       return;
     }
     setSelectedPlan(plan);
@@ -390,7 +386,7 @@ export default function LandingPage() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            {client ? (
+            {isSignedIn ? (
               <>
                 <motion.button
                   onClick={() => navigate("/dashboard")}
@@ -398,7 +394,7 @@ export default function LandingPage() {
                   className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-xl transition-colors ${scrolled ? "text-gray-700 hover:bg-gray-100" : "text-white/80 hover:bg-white/10"}`}
                 >
                   <UserCircle2 className="h-4 w-4" />
-                  {client.name.split(" ")[0]}
+                  {user?.firstName || user?.fullName?.split(" ")[0] || "Mi cuenta"}
                 </motion.button>
                 <motion.button
                   onClick={() => handleReservar()}
@@ -412,7 +408,7 @@ export default function LandingPage() {
             ) : (
               <>
                 <motion.button
-                  onClick={() => setAuthOpen(true)}
+                  onClick={() => navigate("/sign-in")}
                   whileHover={{ scale: 1.03 }}
                   className={`text-sm font-medium px-4 py-2 rounded-xl transition-colors ${scrolled ? "text-gray-700 hover:bg-gray-100" : "text-white/80 hover:bg-white/10"}`}
                 >
@@ -1285,28 +1281,12 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={authOpen}
-        onClose={() => { setAuthOpen(false); setPendingPlan(null); }}
-        onSuccess={() => {
-          setAuthOpen(false);
-          if (pendingPlan) {
-            const plan = pendingPlan;
-            setPendingPlan(null);
-            setTimeout(() => { setSelectedPlan(plan); setPaymentModalOpen(true); }, 100);
-          } else {
-            setBookingOpen(true);
-          }
-        }}
-      />
-
       {/* Booking Modal */}
       <BookingModal
         isOpen={bookingOpen}
         onClose={() => setBookingOpen(false)}
         preselectedClass={preselectedClass}
-        onNeedAuth={() => { setBookingOpen(false); setAuthOpen(true); }}
+        onNeedAuth={() => { setBookingOpen(false); navigate("/sign-in"); }}
         onSuccess={() => {
           setBookingOpen(false);
           showToast("Reserva confirmada. Te esperamos en Moon Pilates Studio.");

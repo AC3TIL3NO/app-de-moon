@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, CreditCard, Smartphone, Banknote, CheckCircle2, Copy, ExternalLink, Loader2, AlertCircle } from "lucide-react";
-import { useClientAuth } from "@/contexts/clientAuth";
+import { useAuth } from "@clerk/react";
+import { useClientContext } from "@/contexts/clientContext";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "").replace("/landing", "") + "/api";
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID ?? "";
@@ -63,10 +64,9 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
   const [processing, setProcessing] = useState(false);
   const paypalContainer = useRef<HTMLDivElement>(null);
   const buttonsInstance = useRef<any>(null);
-  const { client } = useClientAuth();
+  const { getToken } = useAuth();
+  const { client } = useClientContext();
   const { loaded: sdkLoaded, error: sdkError } = usePayPalScript(PAYPAL_CLIENT_ID);
-
-  const token = localStorage.getItem("moon_client_token") ?? "";
 
   useEffect(() => {
     if (!isOpen) {
@@ -99,9 +99,13 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
         height: 48,
       },
       createOrder: async () => {
+        const token = await getToken();
         const res = await fetch(`${API_BASE}/payments/paypal/create-order`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({
             clientId: client?.id,
             membershipId: plan.membershipId ?? null,
@@ -116,9 +120,13 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
       onApprove: async (data: { orderID: string }) => {
         setProcessing(true);
         try {
+          const token = await getToken();
           const res = await fetch(`${API_BASE}/payments/paypal/capture-order`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
             body: JSON.stringify({
               orderId: data.orderID,
               clientId: client?.id,
@@ -158,9 +166,13 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
     if (!client || !plan) return;
     setProcessing(true);
     try {
+      const token = await getToken();
       await fetch(`${API_BASE}/payments/yappy`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           clientId: client.id,
           membershipId: plan.membershipId ?? null,
@@ -214,7 +226,7 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
             {/* Header */}
             <div className="px-6 pt-6 pb-4 border-b border-gray-100">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-bold tracking-widest uppercase text-violet-600">
+                <span className="text-xs font-bold tracking-widest uppercase text-[#C49A1E]">
                   Completar pago
                 </span>
                 <button
@@ -239,7 +251,7 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
                   onClick={() => setTab(t.id)}
                   className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-semibold transition-colors border-b-2 ${
                     tab === t.id
-                      ? "border-violet-600 text-violet-600 bg-violet-50/50"
+                      ? "border-[#C49A1E] text-[#C49A1E] bg-amber-50/50"
                       : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
                 >
@@ -301,7 +313,7 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
 
                   {processing && (
                     <div className="flex items-center justify-center gap-2 py-3">
-                      <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
+                      <Loader2 className="h-5 w-5 animate-spin text-[#C49A1E]" />
                       <span className="text-sm text-gray-600">Procesando pago...</span>
                     </div>
                   )}

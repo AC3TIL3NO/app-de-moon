@@ -18,7 +18,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui
 - **Routing**: Wouter
 - **State**: TanStack Query
-- **Auth**: JWT (jsonwebtoken + bcryptjs)
+- **Staff Auth**: JWT (jsonwebtoken + bcryptjs) — pilates-studio portal
+- **Client Auth**: Clerk (Google Sign-In + email) — landing page client portal
 
 ## Artifacts
 

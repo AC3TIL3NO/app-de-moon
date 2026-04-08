@@ -1,107 +1,104 @@
-import { Router, type IRouter } from "express";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { db } from "@workspace/db";
 import { clientsTable, reservationsTable, classesTable, clientMembershipsTable, instructorsTable } from "@workspace/db";
-import { eq, and, gte, desc } from "drizzle-orm";
-import { verifyToken } from "../lib/auth";
-import { Request, Response, NextFunction } from "express";
+import { eq, and, desc } from "drizzle-orm";
+import { getAuth, clerkClient } from "@clerk/express";
 
 const router: IRouter = Router();
-const JWT_SECRET = process.env["JWT_SECRET"] ?? process.env["SESSION_SECRET"] ?? "pilates-studio-dev-secret";
 
-export interface ClientJwtPayload {
+export interface ClientPayload {
   clientId: number;
   email: string;
   name: string;
   type: "client";
 }
 
-function signClientToken(payload: ClientJwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "30d" });
+async function getOrCreateClient(clerkUserId: string): Promise<typeof clientsTable.$inferSelect> {
+  const byClerk = await db
+    .select()
+    .from(clientsTable)
+    .where(eq(clientsTable.clerkUserId, clerkUserId))
+    .limit(1);
+  if (byClerk.length) return byClerk[0]!;
+
+  const clerkUser = await clerkClient.users.getUser(clerkUserId);
+  const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
+  const firstName = clerkUser.firstName ?? "";
+  const lastName = clerkUser.lastName ?? "";
+  const name = [firstName, lastName].filter(Boolean).join(" ") || email || "Cliente";
+
+  if (email) {
+    const byEmail = await db
+      .select()
+      .from(clientsTable)
+      .where(eq(clientsTable.email, email.toLowerCase()))
+      .limit(1);
+    if (byEmail.length) {
+      await db
+        .update(clientsTable)
+        .set({ clerkUserId })
+        .where(eq(clientsTable.id, byEmail[0]!.id));
+      return byEmail[0]!;
+    }
+  }
+
+  const inserted = await db
+    .insert(clientsTable)
+    .values({
+      clerkUserId,
+      name,
+      email: email.toLowerCase() || `clerk-${clerkUserId}@placeholder.com`,
+      phone: "",
+      plan: "Por Clase",
+      classesRemaining: 0,
+    })
+    .returning();
+  return inserted[0]!;
 }
 
-function requireClientAuth(req: Request, res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
+async function requireClientAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const auth = getAuth(req);
+  if (!auth?.userId) {
     res.status(401).json({ error: "No autorizado" });
     return;
   }
-  const token = authHeader.slice(7);
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as ClientJwtPayload;
-    if (payload.type !== "client") {
-      res.status(401).json({ error: "Token inválido" });
-      return;
-    }
-    (req as any).client = payload;
+    const client = await getOrCreateClient(auth.userId);
+    (req as any).client = {
+      clientId: client.id,
+      name: client.name,
+      email: client.email,
+      type: "client",
+    } as ClientPayload;
     next();
-  } catch {
-    res.status(401).json({ error: "Token inválido o expirado" });
+  } catch (err) {
+    res.status(500).json({ error: "Error al verificar sesión" });
   }
 }
 
-// POST /api/client/register
-router.post("/client/register", async (req, res): Promise<void> => {
-  const { name, email, phone, password } = req.body as Record<string, string>;
-  if (!name || !email || !phone || !password) {
-    res.status(400).json({ error: "Todos los campos son requeridos" });
-    return;
-  }
-  const existing = await db.select().from(clientsTable).where(eq(clientsTable.email, email.toLowerCase())).limit(1);
-  if (existing.length > 0) {
-    res.status(409).json({ error: "Ya existe una cuenta con ese correo" });
-    return;
-  }
-  const passwordHash = await bcrypt.hash(password, 10);
-  const inserted = await db.insert(clientsTable).values({
-    name,
-    email: email.toLowerCase(),
-    phone,
-    plan: "Por Clase",
-    classesRemaining: 0,
-    passwordHash,
-  }).returning();
-
-  const client = inserted[0];
-  const token = signClientToken({ clientId: client.id, email: client.email, name: client.name, type: "client" });
-  res.status(201).json({ token, client: { id: client.id, name: client.name, email: client.email, phone: client.phone } });
-});
-
-// POST /api/client/login
-router.post("/client/login", async (req, res): Promise<void> => {
-  const { email, password } = req.body as Record<string, string>;
-  if (!email || !password) {
-    res.status(400).json({ error: "Email y contraseña requeridos" });
-    return;
-  }
-  const clients = await db.select().from(clientsTable).where(eq(clientsTable.email, email.toLowerCase())).limit(1);
-  if (clients.length === 0 || !clients[0].passwordHash) {
-    res.status(401).json({ error: "Credenciales incorrectas" });
-    return;
-  }
-  const valid = await bcrypt.compare(password, clients[0].passwordHash);
-  if (!valid) {
-    res.status(401).json({ error: "Credenciales incorrectas" });
-    return;
-  }
-  const client = clients[0];
-  const token = signClientToken({ clientId: client.id, email: client.email, name: client.name, type: "client" });
-  res.json({ token, client: { id: client.id, name: client.name, email: client.email, phone: client.phone, plan: client.plan, classesRemaining: client.classesRemaining } });
-});
-
 // GET /api/client/me
 router.get("/client/me", requireClientAuth, async (req, res): Promise<void> => {
-  const { clientId } = (req as any).client as ClientJwtPayload;
+  const { clientId } = (req as any).client as ClientPayload;
   const clients = await db.select().from(clientsTable).where(eq(clientsTable.id, clientId)).limit(1);
   if (!clients.length) { res.status(404).json({ error: "Cliente no encontrado" }); return; }
-  const c = clients[0];
+  const c = clients[0]!;
   res.json({ id: c.id, name: c.name, email: c.email, phone: c.phone, plan: c.plan, classesRemaining: c.classesRemaining, createdAt: c.createdAt.toISOString() });
+});
+
+// GET /api/client/classes - public list of upcoming classes for booking
+router.get("/client/classes", async (req, res): Promise<void> => {
+  const rows = await db
+    .select()
+    .from(classesTable)
+    .where(eq(classesTable.status, "Activa"))
+    .orderBy(classesTable.date, classesTable.time)
+    .limit(50);
+  res.json(rows);
 });
 
 // GET /api/client/reservations
 router.get("/client/reservations", requireClientAuth, async (req, res): Promise<void> => {
-  const { clientId } = (req as any).client as ClientJwtPayload;
+  const { clientId } = (req as any).client as ClientPayload;
   const rows = await db
     .select({
       id: reservationsTable.id,
@@ -125,8 +122,7 @@ router.get("/client/reservations", requireClientAuth, async (req, res): Promise<
 
 // GET /api/client/membership
 router.get("/client/membership", requireClientAuth, async (req, res): Promise<void> => {
-  const { clientId } = (req as any).client as ClientJwtPayload;
-  const today = new Date().toISOString().slice(0, 10);
+  const { clientId } = (req as any).client as ClientPayload;
   const memberships = await db
     .select()
     .from(clientMembershipsTable)
@@ -141,36 +137,23 @@ router.get("/client/membership", requireClientAuth, async (req, res): Promise<vo
   res.json(memberships[0] ?? null);
 });
 
-// GET /api/client/classes - public list of upcoming classes for booking
-router.get("/client/classes", async (req, res): Promise<void> => {
-  const rows = await db
-    .select()
-    .from(classesTable)
-    .where(eq(classesTable.status, "Activa"))
-    .orderBy(classesTable.date, classesTable.time)
-    .limit(50);
-  res.json(rows);
-});
-
 // POST /api/client/reserve
 router.post("/client/reserve", requireClientAuth, async (req, res): Promise<void> => {
-  const { clientId } = (req as any).client as ClientJwtPayload;
+  const { clientId, name } = (req as any).client as ClientPayload;
   const { classId, date } = req.body as { classId?: number; date?: string };
   if (!classId || !date) {
     res.status(400).json({ error: "classId y date son requeridos" });
     return;
   }
 
-  // Check class exists and has capacity
   const classes = await db.select().from(classesTable).where(eq(classesTable.id, classId)).limit(1);
   if (!classes.length) { res.status(404).json({ error: "Clase no encontrada" }); return; }
-  const cls = classes[0];
+  const cls = classes[0]!;
   if (cls.enrolled >= cls.capacity) {
     res.status(409).json({ error: "No hay cupos disponibles" });
     return;
   }
 
-  // Check not already reserved
   const existing = await db.select().from(reservationsTable).where(
     and(eq(reservationsTable.clientId, clientId), eq(reservationsTable.classId, classId), eq(reservationsTable.date, date))
   ).limit(1);
@@ -179,14 +162,13 @@ router.post("/client/reserve", requireClientAuth, async (req, res): Promise<void
     return;
   }
 
-  // Check client membership — deduct a class if active
   const activeMemberships = await db.select().from(clientMembershipsTable).where(
     and(eq(clientMembershipsTable.clientId, clientId), eq(clientMembershipsTable.status, "Activa"))
   ).limit(1);
 
   let usedMembership = false;
   if (activeMemberships.length > 0) {
-    const mem = activeMemberships[0];
+    const mem = activeMemberships[0]!;
     if (mem.classesTotal === -1 || mem.classesUsed < mem.classesTotal) {
       await db.update(clientMembershipsTable)
         .set({ classesUsed: mem.classesUsed + 1 })
@@ -194,27 +176,24 @@ router.post("/client/reserve", requireClientAuth, async (req, res): Promise<void
       usedMembership = true;
     }
   } else {
-    // Check client has classes remaining
-    const clients = await db.select().from(clientsTable).where(eq(clientsTable.id, clientId)).limit(1);
-    if (!clients.length || clients[0].classesRemaining <= 0) {
+    const clientRow = await db.select().from(clientsTable).where(eq(clientsTable.id, clientId)).limit(1);
+    if (!clientRow.length || clientRow[0]!.classesRemaining <= 0) {
       res.status(402).json({ error: "Sin clases disponibles. Compra un plan para continuar." });
       return;
     }
-    await db.update(clientsTable).set({ classesRemaining: clients[0].classesRemaining - 1 }).where(eq(clientsTable.id, clientId));
+    await db.update(clientsTable).set({ classesRemaining: clientRow[0]!.classesRemaining - 1 }).where(eq(clientsTable.id, clientId));
   }
 
-  // Create reservation
   const inserted = await db.insert(reservationsTable).values({
     clientId,
     classId,
-    clientName: (req as any).client.name,
+    clientName: name,
     className: cls.name,
     date,
     status: "Confirmada",
     attended: false,
   }).returning();
 
-  // Update enrolled count
   await db.update(classesTable).set({ enrolled: cls.enrolled + 1 }).where(eq(classesTable.id, classId));
 
   res.status(201).json({ reservation: inserted[0], usedMembership });
@@ -222,7 +201,7 @@ router.post("/client/reserve", requireClientAuth, async (req, res): Promise<void
 
 // DELETE /api/client/reservations/:id - cancel
 router.delete("/client/reservations/:id", requireClientAuth, async (req, res): Promise<void> => {
-  const { clientId } = (req as any).client as ClientJwtPayload;
+  const { clientId } = (req as any).client as ClientPayload;
   const id = parseInt(req.params["id"] ?? "0");
 
   const reservations = await db.select().from(reservationsTable)
@@ -234,7 +213,7 @@ router.delete("/client/reservations/:id", requireClientAuth, async (req, res): P
     return;
   }
 
-  const reservation = reservations[0];
+  const reservation = reservations[0]!;
   if (reservation.status === "Cancelada") {
     res.status(409).json({ error: "La reserva ya fue cancelada" });
     return;
@@ -242,19 +221,30 @@ router.delete("/client/reservations/:id", requireClientAuth, async (req, res): P
 
   await db.update(reservationsTable).set({ status: "Cancelada" }).where(eq(reservationsTable.id, id));
 
-  // Return class spot
   const classRow = await db.select().from(classesTable).where(eq(classesTable.id, reservation.classId)).limit(1);
-  if (classRow.length > 0 && classRow[0].enrolled > 0) {
-    await db.update(classesTable).set({ enrolled: classRow[0].enrolled - 1 }).where(eq(classesTable.id, reservation.classId));
+  if (classRow.length > 0 && classRow[0]!.enrolled > 0) {
+    await db.update(classesTable).set({ enrolled: classRow[0]!.enrolled - 1 }).where(eq(classesTable.id, reservation.classId));
   }
 
-  // Refund class to client
-  const clients = await db.select().from(clientsTable).where(eq(clientsTable.id, clientId)).limit(1);
-  if (clients.length) {
-    await db.update(clientsTable).set({ classesRemaining: clients[0].classesRemaining + 1 }).where(eq(clientsTable.id, clientId));
+  const clientRow = await db.select().from(clientsTable).where(eq(clientsTable.id, clientId)).limit(1);
+  if (clientRow.length) {
+    await db.update(clientsTable).set({ classesRemaining: clientRow[0]!.classesRemaining + 1 }).where(eq(clientsTable.id, clientId));
   }
 
   res.json({ success: true });
+});
+
+// GET /api/client/payments
+router.get("/client/payments", requireClientAuth, async (req, res): Promise<void> => {
+  const { clientId } = (req as any).client as ClientPayload;
+  const { paymentsTable } = await import("@workspace/db");
+  const rows = await db
+    .select()
+    .from(paymentsTable)
+    .where(eq(paymentsTable.clientId, clientId))
+    .orderBy(desc(paymentsTable.createdAt))
+    .limit(50);
+  res.json(rows);
 });
 
 export default router;
