@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { useStudio } from "@/contexts/studio";
-import loginBg from "@/assets/login-bg.jpg";
+import loginBg from "@/assets/login-bg.avif";
 
 export default function Login() {
   const [, setLocation] = useLocation();
