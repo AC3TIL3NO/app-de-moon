@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Trash2, Plus, Users, CheckCircle2, Pencil, Tag, Lock, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth";
 
 const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates-studio$/, "") + "/api";
 
@@ -39,6 +40,9 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function Memberships() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
+
   return (
     <motion.div
       className="space-y-10"
@@ -51,12 +55,12 @@ export default function Memberships() {
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">Membresías</h1>
           <p className="text-muted-foreground mt-2">Planes disponibles y membresías activas de clientes.</p>
         </div>
-        <NewPlanDialog />
+        {isAdmin && <NewPlanDialog />}
       </div>
 
-      <PlansGrid />
+      <PlansGrid isAdmin={isAdmin} />
 
-      <ClientMembershipsSection />
+      <ClientMembershipsSection isAdmin={isAdmin} />
     </motion.div>
   );
 }
@@ -185,7 +189,7 @@ function NewPlanDialog() {
   );
 }
 
-function PlansGrid() {
+function PlansGrid({ isAdmin }: { isAdmin: boolean }) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const { data: plans, isLoading } = useListMemberships();
@@ -334,25 +338,27 @@ function PlansGrid() {
           >
             {plan.active ? "Activo" : "Inactivo"}
           </Badge>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`h-8 w-8 ${isDark ? "text-gray-400 hover:text-violet-300 hover:bg-white/5" : "text-muted-foreground hover:text-primary"}`}
-              onClick={() => openEdit(plan)}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`h-8 w-8 ${isDark ? "text-gray-400 hover:text-red-400 hover:bg-white/5" : "text-muted-foreground hover:text-destructive"}`}
-              onClick={() => deleteMutation.mutate({ id: plan.id })}
-              disabled={deleteMutation.isPending}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+          {isAdmin && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-8 w-8 ${isDark ? "text-gray-400 hover:text-violet-300 hover:bg-white/5" : "text-muted-foreground hover:text-primary"}`}
+                onClick={() => openEdit(plan)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-8 w-8 ${isDark ? "text-gray-400 hover:text-red-400 hover:bg-white/5" : "text-muted-foreground hover:text-destructive"}`}
+                onClick={() => deleteMutation.mutate({ id: plan.id })}
+                disabled={deleteMutation.isPending}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -411,14 +417,16 @@ function PlansGrid() {
                   <Badge variant="secondary" className={plan.active ? "bg-primary/10 text-primary text-xs" : "text-xs"}>
                     {plan.active ? "Activo" : "Inactivo"}
                   </Badge>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => openEdit(plan)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => deleteMutation.mutate({ id: plan.id })}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                  {isAdmin && (
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => openEdit(plan)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => deleteMutation.mutate({ id: plan.id })}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -504,7 +512,7 @@ function PlansGrid() {
   );
 }
 
-function ClientMembershipsSection() {
+function ClientMembershipsSection({ isAdmin }: { isAdmin: boolean }) {
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -558,7 +566,7 @@ function ClientMembershipsSection() {
                     <span>Vence {new Date(cm.endDate).toLocaleDateString("es-PA", { day: "2-digit", month: "short", year: "numeric" })}</span>
                   </div>
                 </div>
-                {cm.status === "Activa" && (
+                {cm.status === "Activa" && isAdmin && (
                   <Button
                     variant="ghost"
                     size="icon"

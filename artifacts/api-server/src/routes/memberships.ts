@@ -9,6 +9,7 @@ import {
   DeleteClientMembershipParams,
   ListClientMembershipsResponse,
 } from "@workspace/api-zod";
+import { requireAuth, requireRole } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -33,7 +34,7 @@ router.get("/memberships", async (_req, res): Promise<void> => {
   res.json(ListMembershipsResponse.parse(plans.map(serializePlan)));
 });
 
-router.post("/memberships", async (req, res): Promise<void> => {
+router.post("/memberships", requireAuth, requireRole("ADMIN"), async (req, res): Promise<void> => {
   const parsed = CreateMembershipBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -52,7 +53,7 @@ router.post("/memberships", async (req, res): Promise<void> => {
   res.status(201).json(serializePlan(plan!));
 });
 
-router.patch("/memberships/:id", async (req, res): Promise<void> => {
+router.patch("/memberships/:id", requireAuth, requireRole("ADMIN"), async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
   const { name, description, totalClasses, price, promoPrice, durationDays, active, isPublic } = req.body as Record<string, unknown>;
@@ -70,7 +71,7 @@ router.patch("/memberships/:id", async (req, res): Promise<void> => {
   res.json(serializePlan(plan));
 });
 
-router.delete("/memberships/:id", async (req, res): Promise<void> => {
+router.delete("/memberships/:id", requireAuth, requireRole("ADMIN"), async (req, res): Promise<void> => {
   const params = DeleteMembershipParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: "Invalid id" }); return; }
   await db.delete(membershipsTable).where(eq(membershipsTable.id, params.data.id));
@@ -95,7 +96,7 @@ router.get("/client-memberships", async (_req, res): Promise<void> => {
   }))));
 });
 
-router.post("/client-memberships", async (req, res): Promise<void> => {
+router.post("/client-memberships", requireAuth, requireRole("ADMIN"), async (req, res): Promise<void> => {
   const parsed = CreateClientMembershipBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -125,7 +126,7 @@ router.post("/client-memberships", async (req, res): Promise<void> => {
   });
 });
 
-router.delete("/client-memberships/:id", async (req, res): Promise<void> => {
+router.delete("/client-memberships/:id", requireAuth, requireRole("ADMIN"), async (req, res): Promise<void> => {
   const params = DeleteClientMembershipParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: "Invalid id" }); return; }
   await db.update(clientMembershipsTable)

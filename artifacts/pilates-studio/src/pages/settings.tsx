@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useStudio } from "@/contexts/studio";
+import { useAuth } from "@/contexts/auth";
 import {
   Save, Building2, Palette, CreditCard, Plus, Trash2,
   GripVertical, Image, Phone, Mail, MapPin, FileText, Tag, Lock,
@@ -39,6 +40,8 @@ const DEFAULT_PAYMENT_METHODS = [
 export default function Settings() {
   const { settings, loading, refresh } = useStudio();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
 
   const [form, setForm] = useState({
     name: "",
@@ -115,16 +118,20 @@ export default function Settings() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">Configuración</h1>
-          <p className="text-muted-foreground mt-1">Solo los administradores pueden editar esta sección.</p>
+          <p className="text-muted-foreground mt-1">
+            {isAdmin ? "Ajusta la información y apariencia del estudio." : "Solo los administradores pueden editar esta sección."}
+          </p>
         </div>
-        <Button
-          onClick={handleSave}
-          disabled={saving || loading}
-          className="gap-2 rounded-xl font-semibold"
-        >
-          <Save className="h-4 w-4" />
-          {saving ? "Guardando..." : "Guardar cambios"}
-        </Button>
+        {isAdmin && (
+          <Button
+            onClick={handleSave}
+            disabled={saving || loading}
+            className="gap-2 rounded-xl font-semibold"
+          >
+            <Save className="h-4 w-4" />
+            {saving ? "Guardando..." : "Guardar cambios"}
+          </Button>
+        )}
       </div>
 
       {/* Studio Info */}
@@ -155,6 +162,7 @@ export default function Settings() {
                     onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                     className="rounded-xl"
                     placeholder="Moon Pilates Studio"
+                    disabled={!isAdmin}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -166,6 +174,7 @@ export default function Settings() {
                     onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
                     className="rounded-xl"
                     placeholder="+507 6586-9949"
+                    disabled={!isAdmin}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -178,6 +187,7 @@ export default function Settings() {
                     onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                     className="rounded-xl"
                     placeholder="moonpilatesstudiopty@gmail.com"
+                    disabled={!isAdmin}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -189,6 +199,7 @@ export default function Settings() {
                     onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
                     className="rounded-xl"
                     placeholder="Atrio Mall, Costa del Este, Piso 2"
+                    disabled={!isAdmin}
                   />
                 </div>
               </div>
@@ -201,6 +212,7 @@ export default function Settings() {
                   onChange={e => setForm(f => ({ ...f, cancellationPolicy: e.target.value }))}
                   className="rounded-xl min-h-[80px] resize-none"
                   placeholder="Las cancelaciones deben realizarse con al menos 24 horas de anticipación."
+                  disabled={!isAdmin}
                 />
               </div>
             </>
@@ -248,6 +260,7 @@ export default function Settings() {
                 onChange={e => setForm(f => ({ ...f, logoUrl: e.target.value }))}
                 className="rounded-xl"
                 placeholder="https://ejemplo.com/logo.png"
+                disabled={!isAdmin}
               />
               <p className="text-xs text-muted-foreground">
                 Pega la URL de tu logo (PNG, JPG o SVG con fondo transparente recomendado).
@@ -278,8 +291,9 @@ export default function Settings() {
                 <button
                   key={c.value}
                   title={c.label}
-                  onClick={() => setForm(f => ({ ...f, primaryColor: c.value }))}
-                  className={`h-9 w-9 rounded-xl border-2 transition-all shadow-sm hover:scale-110 ${
+                  onClick={() => isAdmin && setForm(f => ({ ...f, primaryColor: c.value }))}
+                  disabled={!isAdmin}
+                  className={`h-9 w-9 rounded-xl border-2 transition-all shadow-sm hover:scale-110 disabled:opacity-40 disabled:cursor-not-allowed ${
                     form.primaryColor === c.value
                       ? "border-gray-800 scale-110 shadow-md ring-2 ring-offset-1 ring-gray-400"
                       : "border-transparent"
@@ -293,8 +307,9 @@ export default function Settings() {
                 type="color"
                 value={form.primaryColor}
                 onChange={e => setForm(f => ({ ...f, primaryColor: e.target.value }))}
-                className="h-10 w-14 rounded-xl border border-border/50 cursor-pointer p-1 bg-background"
+                className="h-10 w-14 rounded-xl border border-border/50 cursor-pointer p-1 bg-background disabled:opacity-40 disabled:cursor-not-allowed"
                 title="Selector personalizado"
+                disabled={!isAdmin}
               />
               <Input
                 value={form.primaryColor}
@@ -302,6 +317,7 @@ export default function Settings() {
                 className="rounded-xl font-mono w-32"
                 placeholder="#7C3AED"
                 maxLength={7}
+                disabled={!isAdmin}
               />
               <div
                 className="flex-1 h-10 rounded-xl flex items-center justify-center text-white text-sm font-semibold shadow-sm transition-colors"
@@ -321,8 +337,9 @@ export default function Settings() {
                 type="color"
                 value={form.secondaryColor}
                 onChange={e => setForm(f => ({ ...f, secondaryColor: e.target.value }))}
-                className="h-10 w-14 rounded-xl border border-border/50 cursor-pointer p-1 bg-background"
+                className="h-10 w-14 rounded-xl border border-border/50 cursor-pointer p-1 bg-background disabled:opacity-40 disabled:cursor-not-allowed"
                 title="Selector de color secundario"
+                disabled={!isAdmin}
               />
               <Input
                 value={form.secondaryColor}
@@ -330,6 +347,7 @@ export default function Settings() {
                 className="rounded-xl font-mono w-32"
                 placeholder="#A78BFA"
                 maxLength={7}
+                disabled={!isAdmin}
               />
               <div
                 className="flex-1 h-10 rounded-xl flex items-center justify-center text-white text-sm font-semibold shadow-sm transition-colors"
@@ -362,13 +380,15 @@ export default function Settings() {
               >
                 <GripVertical className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                 <span className="flex-1 text-sm font-medium text-foreground">{m}</span>
-                <button
-                  onClick={() => removeMethod(m)}
-                  className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
-                  title={`Eliminar ${m}`}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => removeMethod(m)}
+                    className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                    title={`Eliminar ${m}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             ))}
             {paymentMethods.length === 0 && (
@@ -378,55 +398,61 @@ export default function Settings() {
             )}
           </div>
 
-          <div className="flex gap-2 pt-1">
-            <Input
-              value={newMethod}
-              onChange={e => setNewMethod(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && addMethod()}
-              placeholder="Agregar método (ej: Zelle, SINPE...)"
-              className="rounded-xl flex-1"
-            />
-            <Button
-              variant="outline"
-              onClick={addMethod}
-              disabled={!newMethod.trim() || paymentMethods.includes(newMethod.trim())}
-              className="rounded-xl gap-1.5 shrink-0"
-            >
-              <Plus className="h-4 w-4" />
-              Agregar
-            </Button>
-          </div>
-
-          {SUGGESTED_METHODS.filter(m => !paymentMethods.includes(m)).length > 0 && (
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              <span className="text-xs text-muted-foreground self-center">Sugeridos:</span>
-              {SUGGESTED_METHODS.filter(m => !paymentMethods.includes(m)).map(m => (
-                <button
-                  key={m}
-                  onClick={() => setPaymentMethods(pm => [...pm, m])}
-                  className="text-xs px-2.5 py-1 rounded-full border border-dashed border-primary/40 text-primary hover:bg-primary/5 transition-colors"
+          {isAdmin && (
+            <>
+              <div className="flex gap-2 pt-1">
+                <Input
+                  value={newMethod}
+                  onChange={e => setNewMethod(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && addMethod()}
+                  placeholder="Agregar método (ej: Zelle, SINPE...)"
+                  className="rounded-xl flex-1"
+                />
+                <Button
+                  variant="outline"
+                  onClick={addMethod}
+                  disabled={!newMethod.trim() || paymentMethods.includes(newMethod.trim())}
+                  className="rounded-xl gap-1.5 shrink-0"
                 >
-                  + {m}
-                </button>
-              ))}
-            </div>
+                  <Plus className="h-4 w-4" />
+                  Agregar
+                </Button>
+              </div>
+
+              {SUGGESTED_METHODS.filter(m => !paymentMethods.includes(m)).length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <span className="text-xs text-muted-foreground self-center">Sugeridos:</span>
+                  {SUGGESTED_METHODS.filter(m => !paymentMethods.includes(m)).map(m => (
+                    <button
+                      key={m}
+                      onClick={() => setPaymentMethods(pm => [...pm, m])}
+                      className="text-xs px-2.5 py-1 rounded-full border border-dashed border-primary/40 text-primary hover:bg-primary/5 transition-colors"
+                    >
+                      + {m}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
 
-      <InternalPlansCard />
+      <InternalPlansCard isAdmin={isAdmin} />
 
-      <div className="flex justify-end pb-8">
-        <Button
-          onClick={handleSave}
-          disabled={saving || loading}
-          size="lg"
-          className="gap-2 rounded-xl font-semibold px-8"
-        >
-          <Save className="h-4 w-4" />
-          {saving ? "Guardando..." : "Guardar todos los cambios"}
-        </Button>
-      </div>
+      {isAdmin && (
+        <div className="flex justify-end pb-8">
+          <Button
+            onClick={handleSave}
+            disabled={saving || loading}
+            size="lg"
+            className="gap-2 rounded-xl font-semibold px-8"
+          >
+            <Save className="h-4 w-4" />
+            {saving ? "Guardando..." : "Guardar todos los cambios"}
+          </Button>
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -442,7 +468,7 @@ interface InternalPlan {
   isPublic: boolean;
 }
 
-function InternalPlansCard() {
+function InternalPlansCard({ isAdmin }: { isAdmin: boolean }) {
   const { toast } = useToast();
   const [plans, setPlans] = useState<InternalPlan[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
@@ -567,43 +593,45 @@ function InternalPlansCard() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <div className="flex items-center gap-1">
-                      <Input
-                        type="number"
-                        min={0}
-                        placeholder="Promo B/."
-                        className="h-8 w-24 rounded-lg text-xs"
-                        value={promoVal}
-                        onChange={e => setEditingPromo(prev => ({ ...prev, [plan.id]: e.target.value }))}
-                      />
-                      {isEditingPromo && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 px-2 rounded-lg text-xs gap-1"
-                          onClick={() => savePromo(plan.id)}
-                          disabled={savingPromo === plan.id}
-                        >
-                          <Save className="h-3 w-3" />
-                        </Button>
-                      )}
+                  {isAdmin && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="Promo B/."
+                          className="h-8 w-24 rounded-lg text-xs"
+                          value={promoVal}
+                          onChange={e => setEditingPromo(prev => ({ ...prev, [plan.id]: e.target.value }))}
+                        />
+                        {isEditingPromo && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 px-2 rounded-lg text-xs gap-1"
+                            onClick={() => savePromo(plan.id)}
+                            disabled={savingPromo === plan.id}
+                          >
+                            <Save className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => removePlan(plan.id)}
+                        className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Desactivar plan"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => removePlan(plan.id)}
-                      className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
-                      title="Desactivar plan"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
 
-        <div className="border-t border-border/40 pt-4">
+        {isAdmin && <div className="border-t border-border/40 pt-4">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-1.5">
             <Plus className="h-3.5 w-3.5" /> Agregar nuevo plan
           </p>
@@ -643,7 +671,7 @@ function InternalPlansCard() {
             <Tag className="h-3 w-3" />
             El precio promo es opcional. Si se activa, los cobros se registran al precio promocional.
           </p>
-        </div>
+        </div>}
       </CardContent>
     </Card>
   );
