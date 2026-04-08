@@ -322,6 +322,12 @@ router.post("/payments/manual", requireAuth, async (req, res): Promise<void> => 
   if (activateMembership && membershipId) {
     const [membership] = await db.select().from(membershipsTable).where(eq(membershipsTable.id, Number(membershipId)));
     if (membership) {
+      const [clientRow] = await db
+        .select({ name: clientsTable.name })
+        .from(clientsTable)
+        .where(eq(clientsTable.id, Number(clientId)))
+        .limit(1);
+
       const start = new Date();
       const end = new Date();
       end.setDate(end.getDate() + (membership.durationDays ?? 30));
@@ -329,7 +335,7 @@ router.post("/payments/manual", requireAuth, async (req, res): Promise<void> => 
         clientId: Number(clientId),
         membershipId: Number(membershipId),
         membershipName: membership.name,
-        clientName: "",
+        clientName: clientRow?.name ?? "",
         startDate: start.toISOString().slice(0, 10),
         endDate: end.toISOString().slice(0, 10),
         classesUsed: 0,
