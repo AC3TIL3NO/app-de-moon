@@ -51,10 +51,20 @@ function applyColor(hex: string) {
   if (!hex || !hex.startsWith("#")) return;
   try {
     const hsl = hexToHsl(hex);
+    const [h, s, lRaw] = hsl.split(" ");
+    const lNum = parseFloat(lRaw);
+    const accentL = Math.min(97, lNum + 54);
+    const accentFgL = Math.max(25, lNum - 10);
+    const accentHsl = `${h} ${s} ${accentL}%`;
+    const accentFgHsl = `${h} ${s} ${accentFgL}%`;
     document.documentElement.style.setProperty("--primary", hsl);
     document.documentElement.style.setProperty("--ring", hsl);
     document.documentElement.style.setProperty("--sidebar-primary", hsl);
     document.documentElement.style.setProperty("--sidebar-ring", hsl);
+    document.documentElement.style.setProperty("--accent", accentHsl);
+    document.documentElement.style.setProperty("--accent-foreground", accentFgHsl);
+    document.documentElement.style.setProperty("--sidebar-accent", accentHsl);
+    document.documentElement.style.setProperty("--sidebar-accent-foreground", accentFgHsl);
   } catch {}
 }
 

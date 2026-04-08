@@ -71,7 +71,7 @@ function methodIcon(m: string) {
   if (m === "Efectivo") return <Banknote className="h-4 w-4 text-emerald-500" />;
   if (m === "Yappy") return <Smartphone className="h-4 w-4 text-green-600" />;
   if (m === "PayPal" || m === "PagueloFacil") return <CreditCard className="h-4 w-4 text-blue-500" />;
-  if (m === "Visa" || m === "Mastercard" || m === "Tarjeta") return <CreditCard className="h-4 w-4 text-indigo-500" />;
+  if (m === "Visa" || m === "Mastercard" || m === "Tarjeta") return <CreditCard className="h-4 w-4 text-amber-600" />;
   if (m === "Transferencia") return <ArrowUpRight className="h-4 w-4 text-orange-500" />;
   return <DollarSign className="h-4 w-4 text-gray-400" />;
 }
@@ -81,7 +81,7 @@ function methodColor(m: string) {
   if (m === "Yappy") return "text-green-700 bg-green-50";
   if (m === "PayPal") return "text-blue-600 bg-blue-50";
   if (m === "PagueloFacil") return "text-sky-600 bg-sky-50";
-  if (m === "Visa" || m === "Mastercard") return "text-indigo-600 bg-indigo-50";
+  if (m === "Visa" || m === "Mastercard") return "text-amber-700 bg-amber-50";
   if (m === "Transferencia") return "text-orange-600 bg-orange-50";
   return "text-gray-600 bg-gray-50";
 }
@@ -647,10 +647,10 @@ export default function PaymentsPage() {
   // Build summary cards from byMethod (dynamic) + fixed totals
   const summaryCards = summary
     ? [
-        { label: "Total hoy", value: summary.totalHoy, icon: DollarSign, cls: "text-violet-600 bg-violet-50" },
+        { label: "Total hoy", value: summary.totalHoy, icon: DollarSign, cls: "text-amber-700 bg-amber-50" },
         { label: "Efectivo", value: summary.byMethod?.["Efectivo"] ?? 0, icon: Banknote, cls: "text-emerald-600 bg-emerald-50" },
         { label: "Yappy", value: summary.byMethod?.["Yappy"] ?? 0, icon: Smartphone, cls: "text-green-600 bg-green-50" },
-        { label: "Visa / Mastercard", value: (summary.byMethod?.["Visa"] ?? 0) + (summary.byMethod?.["Mastercard"] ?? 0), icon: CreditCard, cls: "text-indigo-600 bg-indigo-50" },
+        { label: "Visa / Mastercard", value: (summary.byMethod?.["Visa"] ?? 0) + (summary.byMethod?.["Mastercard"] ?? 0), icon: CreditCard, cls: "text-amber-700 bg-amber-50" },
         { label: "PayPal / PagueloFacil", value: (summary.byMethod?.["PayPal"] ?? 0) + (summary.byMethod?.["PagueloFacil"] ?? 0), icon: CreditCard, cls: "text-blue-600 bg-blue-50" },
         { label: "Transferencia", value: summary.byMethod?.["Transferencia"] ?? 0, icon: ArrowUpRight, cls: "text-orange-600 bg-orange-50" },
         { label: "Pendiente", value: summary.pendiente, icon: DollarSign, cls: "text-amber-600 bg-amber-50" },

@@ -70,35 +70,35 @@
   --popover-foreground: 0 0% 15%;
   --popover-border: 240 5% 93%;
 
-  /* Soft muted purple */
-  --primary: 265 30% 45%;
+  /* Gold */
+  --primary: 42 75% 42%;
   --primary-foreground: 0 0% 100%;
 
-  /* Sage green */
-  --secondary: 135 20% 60%;
+  /* Neutral gray */
+  --secondary: 0 0% 55%;
   --secondary-foreground: 0 0% 100%;
 
-  --muted: 240 5% 96%;
-  --muted-foreground: 240 4% 46%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 46%;
 
-  --accent: 265 30% 96%;
-  --accent-foreground: 265 30% 45%;
+  --accent: 42 75% 96%;
+  --accent-foreground: 42 75% 35%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 240 5% 93%;
-  --input: 240 5% 93%;
-  --ring: 265 30% 45%;
+  --border: 0 0% 91%;
+  --input: 0 0% 91%;
+  --ring: 42 75% 42%;
 
   --sidebar: 0 0% 100%;
   --sidebar-foreground: 0 0% 15%;
-  --sidebar-border: 240 5% 93%;
-  --sidebar-primary: 265 30% 45%;
+  --sidebar-border: 0 0% 91%;
+  --sidebar-primary: 42 75% 42%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 265 30% 96%;
-  --sidebar-accent-foreground: 265 30% 45%;
-  --sidebar-ring: 265 30% 45%;
+  --sidebar-accent: 42 75% 96%;
+  --sidebar-accent-foreground: 42 75% 35%;
+  --sidebar-ring: 42 75% 42%;
 
   --app-font-sans: 'Inter', sans-serif;
   --radius: 0.75rem;
@@ -126,33 +126,33 @@
   --popover-foreground: 0 0% 98%;
   --popover-border: 240 10% 12%;
 
-  --primary: 265 30% 55%;
-  --primary-foreground: 0 0% 100%;
+  --primary: 42 75% 58%;
+  --primary-foreground: 0 0% 10%;
 
-  --secondary: 135 20% 50%;
+  --secondary: 0 0% 50%;
   --secondary-foreground: 0 0% 100%;
 
-  --muted: 240 10% 12%;
-  --muted-foreground: 240 5% 65%;
+  --muted: 0 0% 12%;
+  --muted-foreground: 0 0% 65%;
 
-  --accent: 265 30% 15%;
-  --accent-foreground: 265 30% 85%;
+  --accent: 42 75% 15%;
+  --accent-foreground: 42 75% 85%;
 
   --destructive: 0 62% 30%;
   --destructive-foreground: 0 0% 98%;
 
-  --border: 240 10% 12%;
-  --input: 240 10% 12%;
-  --ring: 265 30% 55%;
+  --border: 0 0% 14%;
+  --input: 0 0% 14%;
+  --ring: 42 75% 58%;
 
   --sidebar: 240 10% 4%;
   --sidebar-foreground: 0 0% 98%;
-  --sidebar-border: 240 10% 12%;
-  --sidebar-primary: 265 30% 55%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 265 30% 15%;
-  --sidebar-accent-foreground: 265 30% 85%;
-  --sidebar-ring: 265 30% 55%;
+  --sidebar-border: 0 0% 14%;
+  --sidebar-primary: 42 75% 58%;
+  --sidebar-primary-foreground: 0 0% 10%;
+  --sidebar-accent: 42 75% 15%;
+  --sidebar-accent-foreground: 42 75% 85%;
+  --sidebar-ring: 42 75% 58%;
 
   --button-outline: rgba(255,255,255, .10);
   --badge-outline: rgba(255,255,255, .05);

@@ -122,7 +122,7 @@ export default function Login() {
           alt="Pilates studio interior"
           className="absolute inset-0 w-full h-full object-cover object-center"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-purple-900/60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         <div className="absolute bottom-16 left-14 right-14 text-white">
           <p className="text-3xl font-semibold leading-snug">
             "La plataforma que tu estudio necesita para crecer."

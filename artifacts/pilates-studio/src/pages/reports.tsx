@@ -182,7 +182,7 @@ export default function Reports() {
         <SummaryCard title="Ingresos Totales" value={formatCurrency(totalRevenue)} loading={loadingRevenue} color="text-primary" />
         <SummaryCard title="Nuevos Clientes" value={totalClients.toString()} loading={loadingClients} color="text-emerald-600" />
         <SummaryCard title="Cancelaciones" value={totalCancellations.toString()} loading={loadingCancellations} color="text-orange-600" />
-        <SummaryCard title="Membresías" value={totalMemberships.toString()} loading={loadingMemberships} color="text-violet-600" />
+        <SummaryCard title="Membresías" value={totalMemberships.toString()} loading={loadingMemberships} color="text-amber-600" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

@@ -291,7 +291,7 @@ function PlansGrid({ isAdmin }: { isAdmin: boolean }) {
         )}
 
         <div className="mb-1">
-          <p className={`text-xs font-bold tracking-widest uppercase mb-1 ${isDark ? "text-violet-400" : "text-primary"}`}>
+          <p className={`text-xs font-bold tracking-widest uppercase mb-1 ${isDark ? "text-amber-400" : "text-primary"}`}>
             {plan.name}
           </p>
           <p className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
@@ -343,7 +343,7 @@ function PlansGrid({ isAdmin }: { isAdmin: boolean }) {
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-8 w-8 ${isDark ? "text-gray-400 hover:text-violet-300 hover:bg-white/5" : "text-muted-foreground hover:text-primary"}`}
+                className={`h-8 w-8 ${isDark ? "text-gray-400 hover:text-amber-300 hover:bg-white/5" : "text-muted-foreground hover:text-primary"}`}
                 onClick={() => openEdit(plan)}
               >
                 <Pencil className="h-4 w-4" />

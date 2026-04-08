@@ -52,7 +52,7 @@ export async function seedDatabase(): Promise<void> {
         .values({
           name: "Moon Pilates Studio",
           slug: "moon-pilates",
-          primaryColor: "#7C3AED",
+          primaryColor: "#C49A1E",
           secondaryColor: "#A78BFA",
           phone: "+507 6586-9949",
           email: "moonpilatesstudiopty@gmail.com",
@@ -70,7 +70,7 @@ export async function seedDatabase(): Promise<void> {
         .update(studiosTable)
         .set({
           name: "Moon Pilates Studio",
-          primaryColor: "#7C3AED",
+          primaryColor: "#C49A1E",
           secondaryColor: "#A78BFA",
           phone: "+507 6586-9949",
           email: "moonpilatesstudiopty@gmail.com",

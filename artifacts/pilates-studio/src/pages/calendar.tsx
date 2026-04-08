@@ -30,7 +30,7 @@ import { Label } from "@/components/ui/label";
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 const TYPE_COLORS: Record<string, string> = {
-  Reformer: "bg-violet-500/10 border-violet-500/20 hover:bg-violet-500/15",
+  Reformer: "bg-amber-500/10 border-amber-500/20 hover:bg-amber-500/15",
   Mat: "bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/15",
   Privada: "bg-amber-500/10 border-amber-500/20 hover:bg-amber-500/15",
 };
