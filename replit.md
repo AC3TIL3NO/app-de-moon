@@ -22,31 +22,48 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Artifacts
 
-1. **pilates-studio** — Main management app (Spanish UI, purple accent)
+1. **pilates-studio** — Main management app (Spanish UI, gold #C49A1E brand)
 2. **api-server** — Express REST API (port 8080)
 3. **landing** — Public SaaS landing page
 
 ## Project: Pilates Studio Manager (SaaS — Phase 3)
 
-A production-ready multi-tenant SaaS for pilates studio management with:
+Moon Pilates Studio — Panama (Atrio Mall Costa del Este, +507 6586-9949)
+Real admin: Shantel Amaya / moonpilatesstudiopty@gmail.com / 123456789
+
+### Brand
+- Primary color: Gold #C49A1E (HSL 42 75% 42%)
+- Font: Inter
+- Login page: Real studio interior photo (login-bg.avif) with dark overlay
 
 ### Auth
 - JWT-based login/logout with 7-day expiry
 - 3 roles: ADMIN, RECEPTIONIST, INSTRUCTOR
 - Protected routes (redirect to /login if unauthenticated)
 - Role-based sidebar navigation
-- Demo accounts: admin@studio.com/admin123 | recep@studio.com/recep123 | inst@studio.com/inst123
+- No demo accounts — real credentials only
 
 ### Pages
-- **Login** — Split layout with real JWT auth, demo credential hints
+- **Login** — Full-screen photo background, empty fields, no demo hints
 - **Dashboard** — Stats cards + 4 Recharts charts (occupancy, top clients, weekly attendance, popular classes)
 - **Clases** — Full CRUD with modal
 - **Clientes** — Client table with side panel (attendance history, notes)
 - **Calendario** — Weekly grid view with attendance toggles + WhatsApp reminders
 - **Instructores** — Instructor cards
-- **Membresías** — Plans CRUD + client membership assignment
+- **Membresías** — Plans CRUD + client membership assignment (ADMIN-only edit/delete guards)
 - **Reportes** — 5 charts (revenue, new clients, cancellations, occupancy, memberships) + CSV & PDF export — ADMIN only
-- **Configuración** — Studio settings form + branding color pickers — ADMIN only
+- **Configuración** — Studio settings form + branding color pickers + internal plans + user management — ADMIN only
+
+### Admin-only Features
+- Create/delete internal plans and promo pricing
+- Create/delete staff users (ADMIN, RECEPTIONIST roles) via Gestión de Usuarios card
+- Edit/delete membership plans
+
+### User Management API
+- GET /api/users — list studio users
+- POST /api/users — create user (email, name, password, role)
+- PATCH /api/users/:id — update user
+- DELETE /api/users/:id — delete user (cannot delete self)
 
 ### Layout
 - Collapsible sidebar with role-filtered nav items

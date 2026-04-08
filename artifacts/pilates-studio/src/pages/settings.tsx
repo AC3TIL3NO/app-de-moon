@@ -6,12 +6,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useStudio } from "@/contexts/studio";
 import { useAuth } from "@/contexts/auth";
 import {
   Save, Building2, Palette, CreditCard, Plus, Trash2,
   GripVertical, Image, Phone, Mail, MapPin, FileText, Tag, Lock,
+  Users, UserPlus, ShieldCheck, Headphones,
 } from "lucide-react";
 
 const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates-studio$/, "") + "/api";
@@ -440,6 +448,8 @@ export default function Settings() {
 
       <InternalPlansCard isAdmin={isAdmin} />
 
+      {isAdmin && <UsersCard />}
+
       {isAdmin && (
         <div className="flex justify-end pb-8">
           <Button
@@ -672,6 +682,226 @@ function InternalPlansCard({ isAdmin }: { isAdmin: boolean }) {
             El precio promo es opcional. Si se activa, los cobros se registran al precio promocional.
           </p>
         </div>}
+      </CardContent>
+    </Card>
+  );
+}
+
+interface StaffUser {
+  id: number;
+  email: string;
+  name: string;
+  role: "ADMIN" | "RECEPTIONIST" | "INSTRUCTOR";
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: "Administrador",
+  RECEPTIONIST: "Recepcionista",
+  INSTRUCTOR: "Instructor",
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  ADMIN: "bg-primary/10 text-primary",
+  RECEPTIONIST: "bg-blue-500/10 text-blue-600",
+  INSTRUCTOR: "bg-emerald-500/10 text-emerald-600",
+};
+
+function UsersCard() {
+  const { toast } = useToast();
+  const { user: me } = useAuth();
+  const [users, setUsers] = useState<StaffUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState<number | null>(null);
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "RECEPTIONIST" });
+  const [saving, setSaving] = useState(false);
+
+  const token = localStorage.getItem("pilates_token");
+  const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/users`, { headers });
+      if (res.ok) setUsers(await res.json());
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+  async function createUser() {
+    if (!form.name || !form.email || !form.password) {
+      toast({ title: "Completa todos los campos.", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/users`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        toast({ title: err.error ?? "Error al crear usuario.", variant: "destructive" });
+        return;
+      }
+      toast({ title: "Usuario creado correctamente." });
+      setOpen(false);
+      setForm({ name: "", email: "", password: "", role: "RECEPTIONIST" });
+      fetchUsers();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteUser(id: number) {
+    setDeleting(id);
+    try {
+      const res = await fetch(`${API_BASE}/users/${id}`, { method: "DELETE", headers });
+      if (!res.ok) {
+        const err = await res.json();
+        toast({ title: err.error ?? "Error al eliminar.", variant: "destructive" });
+        return;
+      }
+      toast({ title: "Usuario eliminado." });
+      fetchUsers();
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  return (
+    <Card className="shadow-sm border-border/50">
+      <CardHeader className="flex flex-row items-center gap-3 pb-4">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
+          <Users className="h-4 w-4 text-primary" />
+        </div>
+        <div className="flex-1">
+          <CardTitle className="text-base">Gestión de Usuarios</CardTitle>
+          <CardDescription>Agrega o elimina recepcionistas y administradores.</CardDescription>
+        </div>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="gap-2 rounded-xl">
+              <UserPlus className="h-4 w-4" />
+              Nuevo Usuario
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Crear Usuario</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label>Nombre completo</Label>
+                <Input
+                  placeholder="Ej. María García"
+                  value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Correo electrónico</Label>
+                <Input
+                  type="email"
+                  placeholder="correo@ejemplo.com"
+                  value={form.email}
+                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Contraseña</Label>
+                <Input
+                  type="password"
+                  placeholder="Contraseña inicial"
+                  value={form.password}
+                  onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Rol</Label>
+                <Select value={form.role} onValueChange={v => setForm(f => ({ ...f, role: v }))}>
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="RECEPTIONIST">
+                      <div className="flex items-center gap-2">
+                        <Headphones className="h-3.5 w-3.5 text-blue-500" />
+                        Recepcionista
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="ADMIN">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+                        Administrador
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button className="w-full gap-2 rounded-xl" onClick={createUser} disabled={saving}>
+                <UserPlus className="h-4 w-4" />
+                {saving ? "Creando..." : "Crear Usuario"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+          </div>
+        ) : users.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6">No hay usuarios registrados.</p>
+        ) : (
+          <div className="space-y-2">
+            {users.map(u => (
+              <div
+                key={u.id}
+                className="flex items-center justify-between p-3.5 rounded-xl border border-border/50 bg-card hover:bg-accent/20 transition-colors"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <span className="text-sm font-semibold text-primary">
+                      {u.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {u.name}
+                      {u.id === me?.id && (
+                        <span className="ml-1.5 text-xs text-muted-foreground font-normal">(tú)</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 ml-3">
+                  <Badge variant="secondary" className={`text-xs ${ROLE_COLORS[u.role]}`}>
+                    {ROLE_LABELS[u.role]}
+                  </Badge>
+                  {u.id !== me?.id && (
+                    <button
+                      onClick={() => deleteUser(u.id)}
+                      disabled={deleting === u.id}
+                      className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors"
+                      title="Eliminar usuario"
+                      data-testid={`delete-user-${u.id}`}
+                      aria-label={`Eliminar ${u.name}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

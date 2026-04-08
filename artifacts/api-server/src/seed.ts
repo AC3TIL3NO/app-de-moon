@@ -84,32 +84,18 @@ export async function seedDatabase(): Promise<void> {
     const existingUsers = await db.select().from(usersTable).limit(1);
 
     if (existingUsers.length === 0) {
-      logger.info("seed: creating users...");
+      logger.info("seed: creating admin user...");
       const ROUNDS = 10;
       await db.insert(usersTable).values([
         {
-          email: "admin@studio.com",
-          name: "Administrador",
-          passwordHash: await bcrypt.hash("admin123", ROUNDS),
+          email: "moonpilatesstudiopty@gmail.com",
+          name: "Shantel Amaya",
+          passwordHash: await bcrypt.hash("123456789", ROUNDS),
           role: "ADMIN" as const,
           studioId,
         },
-        {
-          email: "recep@studio.com",
-          name: "Recepcionista",
-          passwordHash: await bcrypt.hash("recep123", ROUNDS),
-          role: "RECEPTIONIST" as const,
-          studioId,
-        },
-        {
-          email: "inst@studio.com",
-          name: "Instructora Demo",
-          passwordHash: await bcrypt.hash("inst123", ROUNDS),
-          role: "INSTRUCTOR" as const,
-          studioId,
-        },
       ]);
-      logger.info("seed: users created");
+      logger.info("seed: admin user created");
     } else {
       logger.info("seed: users already exist");
     }

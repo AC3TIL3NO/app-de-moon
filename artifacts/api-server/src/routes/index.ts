@@ -12,6 +12,7 @@ import authRouter from "./auth";
 import studioRouter from "./studio";
 import reportsRouter from "./reports";
 import clientAuthRouter from "./clientAuth";
+import usersRouter from "./users";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(membershipsRouter);
 router.use(notificationsRouter);
 router.use(paymentsRouter);
 router.use(clientAuthRouter);
+router.use(usersRouter);
 
 export default router;

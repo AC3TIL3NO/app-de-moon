@@ -14,8 +14,8 @@ export default function Login() {
   const { settings } = useStudio();
   const studioName = settings?.name ?? "Moon Pilates Studio";
   const logoInitial = studioName.charAt(0).toUpperCase();
-  const [email, setEmail] = useState("admin@studio.com");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
 
@@ -106,12 +106,6 @@ export default function Login() {
               )}
             </Button>
 
-            <div className="p-4 rounded-xl bg-muted/50 border border-border/50 text-sm text-muted-foreground space-y-1.5">
-              <div className="font-medium text-foreground mb-2">Cuentas demo</div>
-              <div><span className="font-medium text-foreground">admin@studio.com</span> / admin123</div>
-              <div><span className="font-medium text-foreground">recep@studio.com</span> / recep123</div>
-              <div><span className="font-medium text-foreground">inst@studio.com</span> / inst123</div>
-            </div>
           </form>
         </div>
       </div>
