@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import {
   Calendar, CreditCard, User, History, Receipt,
   LogOut, Clock, CheckCircle2,
-  XCircle, AlertCircle, Menu, X, Zap, Star, DollarSign
+  XCircle, AlertCircle, Menu, X, Zap, Star, DollarSign, ArrowLeft
 } from "lucide-react";
 import { useUser, useAuth, useClerk } from "@clerk/react";
 import { useClientContext } from "@/contexts/clientContext";
@@ -200,6 +200,10 @@ export default function ClientDashboard() {
               <div className="text-xs text-gray-400 truncate">{client.email}</div>
             </div>
           </div>
+          <button onClick={() => navigate("/")}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+            <ArrowLeft className="h-4 w-4" /> Página principal
+          </button>
           <button onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors">
             <LogOut className="h-4 w-4" /> Cerrar sesión
