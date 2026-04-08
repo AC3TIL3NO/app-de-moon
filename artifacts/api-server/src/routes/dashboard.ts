@@ -9,6 +9,8 @@ import {
 
 const router: IRouter = Router();
 
+const DAY_NAMES_ES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+
 function getTodayDate(): string {
   const today = new Date();
   const yyyy = today.getFullYear();
@@ -17,14 +19,18 @@ function getTodayDate(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function getTodayDayName(): string {
+  return DAY_NAMES_ES[new Date().getDay()]!;
+}
+
 router.get("/dashboard/summary", async (_req, res): Promise<void> => {
-  const today = getTodayDate();
+  const todayDay = getTodayDayName();
 
   const [allClasses, allClients, pendingReservations, todayClasses] = await Promise.all([
     db.select().from(classesTable),
     db.select().from(clientsTable),
     db.select().from(reservationsTable).where(eq(reservationsTable.status, "Pendiente")),
-    db.select().from(classesTable).where(eq(classesTable.date, today)),
+    db.select().from(classesTable).where(and(eq(classesTable.dayOfWeek, todayDay), eq(classesTable.status, "Activa"))),
   ]);
 
   const totalCapacity = todayClasses.reduce((sum, c) => sum + c.capacity, 0);
@@ -41,7 +47,7 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
 });
 
 router.get("/dashboard/today-classes", async (_req, res): Promise<void> => {
-  const today = getTodayDate();
+  const todayDay = getTodayDayName();
 
   const rows = await db
     .select({
@@ -61,7 +67,7 @@ router.get("/dashboard/today-classes", async (_req, res): Promise<void> => {
     })
     .from(classesTable)
     .leftJoin(instructorsTable, eq(classesTable.instructorId, instructorsTable.id))
-    .where(eq(classesTable.date, today))
+    .where(and(eq(classesTable.dayOfWeek, todayDay), eq(classesTable.status, "Activa")))
     .orderBy(classesTable.time);
 
   const mapped = rows.map((r) => ({ ...r, instructor: r.instructor ?? "Sin instructor" }));
