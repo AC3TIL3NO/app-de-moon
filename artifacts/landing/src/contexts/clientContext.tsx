@@ -9,6 +9,7 @@ interface ClientRecord {
   phone: string;
   plan: string;
   classesRemaining: number;
+  policiesAcceptedAt: string | null;
 }
 
 interface ClientContextValue {

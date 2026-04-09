@@ -13,6 +13,7 @@ export const clientsTable = pgTable("clients", {
   notes: text("notes"),
   passwordHash: text("password_hash"),
   clerkUserId: text("clerk_user_id"),
+  policiesAcceptedAt: timestamp("policies_accepted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   uniqueIndex("clients_phone_nonempty_unique").on(t.phone).where(sql`phone != ''`),

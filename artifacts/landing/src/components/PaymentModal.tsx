@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, CreditCard, Smartphone, CheckCircle2, Copy, ExternalLink, Loader2, AlertCircle, Shield } from "lucide-react";
+import { X, CreditCard, Smartphone, CheckCircle2, Copy, ExternalLink, Loader2, AlertCircle, Shield, ScrollText } from "lucide-react";
 import { useAuth } from "@clerk/react";
 import { useClientContext } from "@/contexts/clientContext";
+import { PoliciesModal } from "@/components/PoliciesModal";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "").replace("/landing", "") + "/api";
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID ?? "";
@@ -63,6 +64,8 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
   const [yappyCopied, setYappyCopied] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [pagueloError, setPagueloError] = useState<string | null>(null);
+  const [policiesAccepted, setPoliciesAccepted] = useState(false);
+  const [showPolicies, setShowPolicies] = useState(false);
 
   const paypalContainer = useRef<HTMLDivElement>(null);
   const buttonsInstance = useRef<any>(null);
@@ -71,6 +74,12 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
   const { getToken } = useAuth();
   const { client, refetch } = useClientContext();
   const { loaded: sdkLoaded, error: sdkError } = usePayPalScript(PAYPAL_CLIENT_ID);
+
+  const alreadyAccepted = !!client?.policiesAcceptedAt;
+
+  useEffect(() => {
+    setPoliciesAccepted(alreadyAccepted);
+  }, [alreadyAccepted]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -169,12 +178,23 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
     };
   }, [isOpen, tab, sdkLoaded, plan]);
 
+  const acceptPoliciesIfNeeded = async (token: string | null) => {
+    if (alreadyAccepted) return;
+    await fetch(`${API_BASE}/client/accept-policies`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    });
+    refetch();
+  };
+
   const handlePagueloFacil = async () => {
     if (!client || !plan) return;
+    if (!policiesAccepted) { setPagueloError("Debes aceptar las políticas para continuar."); return; }
     setProcessing(true);
     setPagueloError(null);
     try {
       const token = await getToken();
+      await acceptPoliciesIfNeeded(token);
       const res = await fetch(`${API_BASE}/payments/paguelo-facil/create-order`, {
         method: "POST",
         headers: {
@@ -229,6 +249,7 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
     setProcessing(true);
     try {
       const token = await getToken();
+      await acceptPoliciesIfNeeded(token);
       await fetch(`${API_BASE}/payments/yappy`, {
         method: "POST",
         headers: {
@@ -259,6 +280,54 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
 
   if (!plan) return null;
 
+  const PoliciesCheckbox = () => (
+    <div className={`rounded-2xl p-4 ${alreadyAccepted ? "bg-emerald-50 border border-emerald-100" : "bg-amber-50 border border-amber-100"}`}>
+      {alreadyAccepted ? (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <span className="text-sm text-emerald-700 font-medium">Políticas aceptadas</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowPolicies(true)}
+            className="text-xs text-emerald-600 underline hover:text-emerald-700 flex items-center gap-1"
+          >
+            <ScrollText className="h-3 w-3" />
+            Ver políticas
+          </button>
+        </div>
+      ) : (
+        <label className="flex items-start gap-3 cursor-pointer group">
+          <div className="relative mt-0.5 shrink-0">
+            <input
+              type="checkbox"
+              checked={policiesAccepted}
+              onChange={e => { setPoliciesAccepted(e.target.checked); setPagueloError(null); }}
+              className="sr-only"
+            />
+            <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-all ${
+              policiesAccepted ? "bg-[#C49A1E] border-[#C49A1E]" : "border-amber-300 bg-white group-hover:border-[#C49A1E]"
+            }`}>
+              {policiesAccepted && <CheckCircle2 className="h-3 w-3 text-white" strokeWidth={3} />}
+            </div>
+          </div>
+          <span className="text-sm text-gray-700 leading-snug">
+            He leído y acepto las{" "}
+            <button
+              type="button"
+              onClick={e => { e.preventDefault(); setShowPolicies(true); }}
+              className="text-[#C49A1E] font-semibold underline underline-offset-2 hover:text-[#b08a18] transition-colors inline-flex items-center gap-1"
+            >
+              <ScrollText className="h-3 w-3" />
+              políticas de Moon Pilates Studio
+            </button>
+          </span>
+        </label>
+      )}
+    </div>
+  );
+
   const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "paguelo", label: "Tarjeta", icon: <Shield className="h-4 w-4" /> },
     { id: "paypal", label: "PayPal", icon: <CreditCard className="h-4 w-4" /> },
@@ -266,6 +335,8 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
   ];
 
   return (
+    <>
+    <PoliciesModal isOpen={showPolicies} onClose={() => setShowPolicies(false)} />
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -324,7 +395,10 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
             </div>
 
             {/* Tab content */}
-            <div className="p-6">
+            <div className="p-6 space-y-5">
+
+              {/* Policies checkbox — shown for all payment methods */}
+              <PoliciesCheckbox />
 
               {/* PagaloFácil tab */}
               {tab === "paguelo" && (
@@ -561,5 +635,6 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
         </motion.div>
       )}
     </AnimatePresence>
+    </>
   );
 }

@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Calendar, Clock, User, Users, CheckCircle2, ArrowRight, AlertCircle } from "lucide-react";
+import { X, Calendar, Clock, User, Users, CheckCircle2, ArrowRight, AlertCircle, ScrollText } from "lucide-react";
 import { useAuth, useUser } from "@clerk/react";
 import { API_BASE } from "@/lib/api";
+import { useClientContext } from "@/contexts/clientContext";
+import { PoliciesModal } from "@/components/PoliciesModal";
 import heroBg from "@assets/40b756_86a22044bf6b4d728b69b627f57b50ec~mv2_1775503320084.avif";
 import studioBg from "@assets/40b756_4f1dc1bd9ca941efa4af8c07e580dd1b~mv2_1775503621543.avif";
 
@@ -38,6 +40,7 @@ const LEVELS: Record<string, string> = {
 export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, onSuccess }: BookingModalProps) {
   const { user } = useUser();
   const { getToken } = useAuth();
+  const { client, refetch } = useClientContext();
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [selected, setSelected] = useState<ClassItem | null>(null);
   const [date, setDate] = useState("");
@@ -46,6 +49,14 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
   const [loadingClasses, setLoadingClasses] = useState(false);
   const [error, setError] = useState("");
   const [noMembership, setNoMembership] = useState(false);
+  const [policiesAccepted, setPoliciesAccepted] = useState(false);
+  const [showPolicies, setShowPolicies] = useState(false);
+
+  const alreadyAccepted = !!client?.policiesAcceptedAt;
+
+  useEffect(() => {
+    setPoliciesAccepted(alreadyAccepted);
+  }, [alreadyAccepted]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -74,10 +85,20 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
 
   const handleConfirm = async () => {
     if (!selected || !date) return;
+    if (!policiesAccepted) { setError("Debes aceptar las políticas para continuar."); return; }
     setLoading(true);
     setError("");
     try {
       const token = await getToken();
+
+      if (!alreadyAccepted) {
+        await fetch(`${API_BASE}/client/accept-policies`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        });
+        refetch();
+      }
+
       const res = await fetch(`${API_BASE}/client/reserve`, {
         method: "POST",
         headers: {
@@ -103,6 +124,8 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
   const spots = selected ? selected.capacity - selected.enrolled : 0;
 
   return (
+    <>
+    <PoliciesModal isOpen={showPolicies} onClose={() => setShowPolicies(false)} />
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -247,6 +270,54 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
                     </div>
                   )}
 
+                  {!alreadyAccepted && (
+                    <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 space-y-3">
+                      <label className="flex items-start gap-3 cursor-pointer group">
+                        <div className="relative mt-0.5 shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={policiesAccepted}
+                            onChange={e => { setPoliciesAccepted(e.target.checked); if (e.target.checked) setError(""); }}
+                            className="sr-only peer"
+                          />
+                          <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                            policiesAccepted ? "bg-[#C49A1E] border-[#C49A1E]" : "border-amber-300 bg-white group-hover:border-[#C49A1E]"
+                          }`}>
+                            {policiesAccepted && <CheckCircle2 className="h-3 w-3 text-white" strokeWidth={3} />}
+                          </div>
+                        </div>
+                        <span className="text-sm text-gray-700 leading-snug">
+                          He leído y acepto las{" "}
+                          <button
+                            type="button"
+                            onClick={e => { e.preventDefault(); setShowPolicies(true); }}
+                            className="text-[#C49A1E] font-semibold underline underline-offset-2 hover:text-[#b08a18] transition-colors inline-flex items-center gap-1"
+                          >
+                            <ScrollText className="h-3 w-3" />
+                            políticas de Moon Pilates Studio
+                          </button>
+                        </span>
+                      </label>
+                    </div>
+                  )}
+
+                  {alreadyAccepted && (
+                    <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        <span className="text-sm text-emerald-700 font-medium">Políticas aceptadas</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowPolicies(true)}
+                        className="text-xs text-emerald-600 underline hover:text-emerald-700 flex items-center gap-1"
+                      >
+                        <ScrollText className="h-3 w-3" />
+                        Ver políticas
+                      </button>
+                    </div>
+                  )}
+
                   {error && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-2.5">{error}</div>}
 
                   <div className="flex gap-3 pt-2">
@@ -254,7 +325,7 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
                       className="flex-1 h-11 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
                       Cambiar clase
                     </button>
-                    <button onClick={handleConfirm} disabled={loading || !date || spots <= 0}
+                    <button onClick={handleConfirm} disabled={loading || !date || spots <= 0 || !policiesAccepted}
                       className="flex-1 h-11 rounded-xl bg-[#C49A1E] text-white text-sm font-semibold hover:bg-[#b08a18] transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
                       {loading ? "Reservando..." : <><span>Confirmar</span><CheckCircle2 className="h-4 w-4" /></>}
                     </button>
@@ -295,5 +366,6 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
         </div>
       )}
     </AnimatePresence>
+    </>
   );
 }

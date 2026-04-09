@@ -127,7 +127,15 @@ router.get("/client/me", requireClientAuth, async (req, res): Promise<void> => {
   const clients = await db.select().from(clientsTable).where(eq(clientsTable.id, clientId)).limit(1);
   if (!clients.length) { res.status(404).json({ error: "Cliente no encontrado" }); return; }
   const c = clients[0]!;
-  res.json({ id: c.id, name: c.name, email: c.email, phone: c.phone, plan: c.plan, classesRemaining: c.classesRemaining, createdAt: c.createdAt.toISOString() });
+  res.json({ id: c.id, name: c.name, email: c.email, phone: c.phone, plan: c.plan, classesRemaining: c.classesRemaining, createdAt: c.createdAt.toISOString(), policiesAcceptedAt: c.policiesAcceptedAt ? c.policiesAcceptedAt.toISOString() : null });
+});
+
+// POST /api/client/accept-policies
+router.post("/client/accept-policies", requireClientAuth, async (req, res): Promise<void> => {
+  const { clientId } = (req as any).client as ClientPayload;
+  const now = new Date();
+  await db.update(clientsTable).set({ policiesAcceptedAt: now }).where(eq(clientsTable.id, clientId));
+  res.json({ policiesAcceptedAt: now.toISOString() });
 });
 
 // GET /api/client/classes - public list of upcoming classes for booking
