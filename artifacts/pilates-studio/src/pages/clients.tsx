@@ -390,11 +390,12 @@ function CreateClientDialog({ open, onOpenChange }: { open: boolean; onOpenChang
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="email">Correo electrónico</Label>
+              <Label htmlFor="email">Correo electrónico <span className="text-gray-400 font-normal">(opcional)</span></Label>
               <Input 
-                id="email" type="email" required value={formData.email}
+                id="email" type="email" value={formData.email}
                 onChange={e => setFormData({...formData, email: e.target.value})}
                 className="rounded-lg"
+                placeholder="correo@ejemplo.com"
               />
             </div>
 
