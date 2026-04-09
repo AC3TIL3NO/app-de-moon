@@ -192,6 +192,204 @@ router.post("/payments/paypal/capture-order", async (req, res): Promise<void> =>
   }
 });
 
+// ─── PagaloFácil helpers ───────────────────────────────────────────────────────
+
+const PF_BASE = "https://secure.paguelofacil.com";
+
+async function pfCreateCheckout(params: {
+  cclw: string;
+  amount: number;
+  description: string;
+  returnUrl: string;
+  orderId?: string;
+}): Promise<{ url: string; code: string }> {
+  const body = new URLSearchParams({
+    CCLW: params.cclw,
+    CMTN: params.amount.toFixed(2),
+    CDSC: params.description.slice(0, 150).replace(/[^a-zA-Z0-9 .,#\-]/g, ""),
+    RETURN_URL: Buffer.from(params.returnUrl).toString("hex"),
+    ...(params.orderId ? { PARM_1: params.orderId } : {}),
+  });
+
+  const res = await fetch(`${PF_BASE}/LinkDeamon.cfm`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+  });
+
+  const text = await res.text();
+  let json: any;
+  try { json = JSON.parse(text); } catch { throw new Error(`PagaloFácil respuesta inesperada: ${text.slice(0, 200)}`); }
+
+  if (!json.success || !json.data?.url) {
+    throw new Error(json.message ?? "Error al crear orden en PagaloFácil");
+  }
+  return { url: json.data.url, code: json.data.code };
+}
+
+// ─── POST /api/payments/paguelo-facil/create-order ───────────────────────────
+
+router.post("/payments/paguelo-facil/create-order", async (req, res): Promise<void> => {
+  const { clientId, membershipId, concept, amount } = req.body;
+
+  if (!clientId || amount === undefined) {
+    res.status(400).json({ error: "Faltan datos requeridos" });
+    return;
+  }
+
+  const cclw = process.env.PAGUELO_FACIL_CCLW;
+  if (!cclw) {
+    res.status(503).json({ error: "PagaloFácil no está configurado. Contacta al administrador." });
+    return;
+  }
+
+  try {
+    const domain = process.env.REPLIT_DEV_DOMAIN;
+    const baseUrl = domain ? `https://${domain}` : `${req.protocol}://${req.get("host")}`;
+    const returnUrl = `${baseUrl}/api/payments/paguelo-facil/webhook`;
+
+    const [payment] = await db.insert(paymentsTable).values({
+      clientId: Number(clientId),
+      membershipId: membershipId ? Number(membershipId) : null,
+      concept: concept ?? "Membresía",
+      amount: Number(amount),
+      paymentMethod: "PagaloFácil",
+      chargedBy: "Sistema",
+      status: "pending",
+    }).returning();
+
+    const checkout = await pfCreateCheckout({
+      cclw,
+      amount: Number(amount),
+      description: concept ?? "Membresia Moon Pilates Studio",
+      returnUrl,
+      orderId: String(payment.id),
+    });
+
+    await db.update(paymentsTable)
+      .set({ stripeSessionId: checkout.code })
+      .where(eq(paymentsTable.id, payment.id));
+
+    res.json({ checkoutUrl: checkout.url, code: checkout.code, paymentId: payment.id });
+  } catch (err: any) {
+    console.error("[PagaloFácil] Error:", err.message);
+    res.status(500).json({ error: err.message ?? "Error al crear la orden de pago" });
+  }
+});
+
+// ─── POST /api/payments/paguelo-facil/webhook ─────────────────────────────────
+
+router.post("/payments/paguelo-facil/webhook", async (req, res): Promise<void> => {
+  try {
+    const payload = req.body as {
+      TotalPagado?: string;
+      Fecha?: string;
+      Hora?: string;
+      Tipo?: string;
+      Oper?: string;
+      Usuario?: string;
+      Email?: string;
+      Estado?: string;
+      Razon?: string;
+      CMTN?: string;
+      CDSC?: string;
+      CCLW?: string;
+      PARM_1?: string;
+    };
+
+    console.log("[PagaloFácil] Webhook recibido:", JSON.stringify(payload));
+
+    const cclw = process.env.PAGUELO_FACIL_CCLW ?? "";
+    if (payload.CCLW && !payload.CCLW.startsWith(cclw.slice(0, 8))) {
+      res.status(403).json({ error: "CCLW no coincide" });
+      return;
+    }
+
+    const estado = payload.Estado ?? "";
+    const paymentId = payload.PARM_1 ? Number(payload.PARM_1) : null;
+    const oper = payload.Oper ?? "";
+
+    if (estado === "Aprobada" && paymentId) {
+      const [payment] = await db
+        .select()
+        .from(paymentsTable)
+        .where(eq(paymentsTable.id, paymentId));
+
+      if (payment && payment.status !== "paid") {
+        await db.update(paymentsTable)
+          .set({ status: "paid", stripePaymentIntentId: oper })
+          .where(eq(paymentsTable.id, paymentId));
+
+        if (payment.membershipId) {
+          const [membership] = await db
+            .select()
+            .from(membershipsTable)
+            .where(eq(membershipsTable.id, payment.membershipId));
+
+          if (membership) {
+            const [clientRow] = await db
+              .select({ name: clientsTable.name })
+              .from(clientsTable)
+              .where(eq(clientsTable.id, payment.clientId))
+              .limit(1);
+
+            const startDate = new Date();
+            const endDate = new Date();
+            endDate.setDate(endDate.getDate() + (membership.durationDays ?? 30));
+
+            await db.insert(clientMembershipsTable).values({
+              clientId: payment.clientId,
+              membershipId: membership.id,
+              membershipName: membership.name,
+              clientName: clientRow?.name ?? "",
+              startDate: startDate.toISOString().slice(0, 10),
+              endDate: endDate.toISOString().slice(0, 10),
+              classesUsed: 0,
+              classesTotal: membership.totalClasses,
+              status: "Activa",
+            });
+
+            await db.update(clientsTable)
+              .set({ plan: membership.name, classesRemaining: membership.totalClasses })
+              .where(eq(clientsTable.id, payment.clientId));
+
+            console.log(`[PagaloFácil] Membresía activada para cliente ${payment.clientId}`);
+          }
+        }
+      }
+    } else if (estado === "Rechazada" && paymentId) {
+      await db.update(paymentsTable)
+        .set({ status: "failed", stripePaymentIntentId: oper })
+        .where(eq(paymentsTable.id, paymentId));
+    }
+
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error("[PagaloFácil] Webhook error:", err.message);
+    res.status(500).json({ error: "Error interno" });
+  }
+});
+
+// ─── GET /api/payments/paguelo-facil/status/:paymentId ───────────────────────
+
+router.get("/payments/paguelo-facil/status/:paymentId", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.paymentId, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "ID inválido" }); return; }
+
+  try {
+    const [payment] = await db
+      .select({ status: paymentsTable.status, membershipId: paymentsTable.membershipId })
+      .from(paymentsTable)
+      .where(eq(paymentsTable.id, id));
+
+    if (!payment) { res.status(404).json({ error: "Pago no encontrado" }); return; }
+
+    res.json({ status: payment.status });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── POST /api/payments/yappy ─────────────────────────────────────────────────
 
 router.post("/payments/yappy", async (req, res): Promise<void> => {

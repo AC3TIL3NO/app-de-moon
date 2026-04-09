@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, CreditCard, Smartphone, CheckCircle2, Copy, ExternalLink, Loader2, AlertCircle } from "lucide-react";
+import { X, CreditCard, Smartphone, CheckCircle2, Copy, ExternalLink, Loader2, AlertCircle, Shield } from "lucide-react";
 import { useAuth } from "@clerk/react";
 import { useClientContext } from "@/contexts/clientContext";
 
@@ -22,7 +22,7 @@ interface Props {
   onSuccess: (method: string) => void;
 }
 
-type Tab = "paypal" | "yappy";
+type Tab = "paguelo" | "paypal" | "yappy";
 
 declare global {
   interface Window {
@@ -56,25 +56,31 @@ function usePayPalScript(clientId: string) {
 }
 
 export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
-  const [tab, setTab] = useState<Tab>("paypal");
+  const [tab, setTab] = useState<Tab>("paguelo");
   const [paypalReady, setPaypalReady] = useState(false);
   const [paypalError, setPaypalError] = useState<string | null>(null);
   const [yappyDone, setYappyDone] = useState(false);
   const [yappyCopied, setYappyCopied] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [pagueloError, setPagueloError] = useState<string | null>(null);
+
   const paypalContainer = useRef<HTMLDivElement>(null);
   const buttonsInstance = useRef<any>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const { getToken } = useAuth();
-  const { client } = useClientContext();
+  const { client, refetch } = useClientContext();
   const { loaded: sdkLoaded, error: sdkError } = usePayPalScript(PAYPAL_CLIENT_ID);
 
   useEffect(() => {
     if (!isOpen) {
-      setTab("paypal");
+      setTab("paguelo");
       setPaypalReady(false);
       setPaypalError(null);
       setYappyDone(false);
       setProcessing(false);
+      setPagueloError(null);
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
     }
   }, [isOpen]);
 
@@ -135,6 +141,7 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
           });
           const result = await res.json();
           if (!res.ok) throw new Error(result.error ?? "Error al confirmar pago");
+          refetch?.();
           onSuccess("PayPal");
           onClose();
         } catch (err: any) {
@@ -161,6 +168,61 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
       buttonsInstance.current = null;
     };
   }, [isOpen, tab, sdkLoaded, plan]);
+
+  const handlePagueloFacil = async () => {
+    if (!client || !plan) return;
+    setProcessing(true);
+    setPagueloError(null);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/payments/paguelo-facil/create-order`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          clientId: client.id,
+          membershipId: plan.membershipId ?? null,
+          concept: `Membresia ${plan.name} Moon Pilates Studio`,
+          amount: plan.numericPrice,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Error al iniciar el pago");
+
+      const { checkoutUrl, paymentId } = data as { checkoutUrl: string; paymentId: number };
+
+      window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+
+      pollRef.current = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`${API_BASE}/payments/paguelo-facil/status/${paymentId}`);
+          const statusData = await statusRes.json();
+          if (statusData.status === "paid") {
+            clearInterval(pollRef.current!);
+            pollRef.current = null;
+            refetch?.();
+            onSuccess("PagaloFácil");
+            onClose();
+          } else if (statusData.status === "failed") {
+            clearInterval(pollRef.current!);
+            pollRef.current = null;
+            setPagueloError("El pago fue rechazado. Intenta de nuevo.");
+          }
+        } catch { }
+      }, 3000);
+
+      setTimeout(() => {
+        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      }, 10 * 60 * 1000);
+
+    } catch (err: any) {
+      setPagueloError(err.message ?? "Error al conectar con PagaloFácil");
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   const handleYappyConfirm = async () => {
     if (!client || !plan) return;
@@ -198,7 +260,8 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
   if (!plan) return null;
 
   const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "paypal", label: "Tarjeta / PayPal", icon: <CreditCard className="h-4 w-4" /> },
+    { id: "paguelo", label: "Tarjeta", icon: <Shield className="h-4 w-4" /> },
+    { id: "paypal", label: "PayPal", icon: <CreditCard className="h-4 w-4" /> },
     { id: "yappy", label: "Yappy", icon: <Smartphone className="h-4 w-4" /> },
   ];
 
@@ -255,13 +318,95 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
                   }`}
                 >
                   {t.icon}
-                  <span className="hidden sm:inline">{t.label}</span>
+                  <span>{t.label}</span>
                 </button>
               ))}
             </div>
 
             {/* Tab content */}
             <div className="p-6">
+
+              {/* PagaloFácil tab */}
+              {tab === "paguelo" && (
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-500 text-center">
+                    Paga con tarjeta Visa, Mastercard o Clave en la plataforma segura de PagaloFácil.
+                  </p>
+
+                  <div className="flex items-center justify-center gap-3">
+                    {[
+                      { label: "Visa", bg: "#1a1f71", color: "#fff" },
+                      { label: "MC", bg: "#eb001b", color: "#fff" },
+                      { label: "Clave", bg: "#00a651", color: "#fff" },
+                    ].map(c => (
+                      <div
+                        key={c.label}
+                        className="h-7 px-2.5 rounded-md flex items-center text-xs font-black"
+                        style={{ background: c.bg, color: c.color }}
+                      >
+                        {c.label}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="bg-[#C49A1E]/8 border border-[#C49A1E]/20 rounded-2xl p-4 text-center">
+                    <Shield className="h-8 w-8 text-[#C49A1E] mx-auto mb-2" />
+                    <p className="text-sm font-semibold text-gray-800">Pago 100% seguro</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Serás redirigido a PagaloFácil, la pasarela de pagos #1 de Panamá.
+                      Tu información bancaria nunca es compartida con nosotros.
+                    </p>
+                  </div>
+
+                  {pagueloError && (
+                    <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-center">
+                      <AlertCircle className="h-5 w-5 text-red-500 mx-auto mb-2" />
+                      <p className="text-sm text-red-700">{pagueloError}</p>
+                      <button
+                        onClick={() => setPagueloError(null)}
+                        className="mt-2 text-xs text-red-600 underline"
+                      >
+                        Intentar de nuevo
+                      </button>
+                    </div>
+                  )}
+
+                  {processing && (
+                    <div className="flex items-center justify-center gap-2 py-2">
+                      <Loader2 className="h-5 w-5 animate-spin text-[#C49A1E]" />
+                      <span className="text-sm text-gray-600">Abriendo PagaloFácil...</span>
+                    </div>
+                  )}
+
+                  {!processing && !pagueloError && (
+                    <>
+                      <button
+                        onClick={handlePagueloFacil}
+                        className="w-full h-12 rounded-2xl font-bold text-sm text-white transition-colors flex items-center justify-center gap-2"
+                        style={{ background: "#C49A1E" }}
+                        onMouseEnter={e => (e.currentTarget.style.background = "#b08a18")}
+                        onMouseLeave={e => (e.currentTarget.style.background = "#C49A1E")}
+                      >
+                        <Shield className="h-4 w-4" />
+                        Pagar B/. {plan.numericPrice.toFixed(2)} con PagaloFácil
+                      </button>
+                      <p className="text-xs text-gray-400 text-center">
+                        Se abrirá una nueva ventana. Regresa aquí cuando termines.
+                      </p>
+                    </>
+                  )}
+
+                  {processing && pollRef.current && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
+                      <Loader2 className="h-5 w-5 animate-spin text-amber-500 mx-auto mb-2" />
+                      <p className="text-sm text-amber-700 font-medium">Esperando confirmación de pago...</p>
+                      <p className="text-xs text-amber-600 mt-1">
+                        Completa el pago en la ventana de PagaloFácil. Esta pantalla se actualizará sola.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* PayPal tab */}
               {tab === "paypal" && (
@@ -270,7 +415,6 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
                     Paga con tu tarjeta Visa o Mastercard, o con tu cuenta PayPal. 100% seguro.
                   </p>
 
-                  {/* Card icons */}
                   <div className="flex items-center justify-center gap-3">
                     {[
                       { label: "Visa", bg: "#1a1f71", color: "#fff" },
@@ -291,10 +435,10 @@ export function PaymentModal({ isOpen, plan, onClose, onSuccess }: Props) {
                     <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
                       <AlertCircle className="h-5 w-5 text-amber-500 mx-auto mb-2" />
                       <p className="text-sm text-amber-700 font-medium">
-                        Pagos en línea temporalmente no disponibles.
+                        Pagos con PayPal temporalmente no disponibles.
                       </p>
                       <p className="text-xs text-amber-600 mt-1">
-                        Elige Yappy o Efectivo, o contáctanos por WhatsApp.
+                        Usa PagaloFácil o Yappy.
                       </p>
                     </div>
                   ) : paypalError ? (
