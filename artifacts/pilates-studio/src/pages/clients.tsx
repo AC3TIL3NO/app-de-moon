@@ -21,7 +21,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { CreateClientBodyPlan, Client } from "@workspace/api-client-react";
 import {
@@ -341,30 +340,24 @@ function CreateClientDialog({ open, onOpenChange }: { open: boolean; onOpenChang
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    plan: CreateClientBodyPlan.Mensual,
-    classesRemaining: "12",
-    notes: ""
-  });
+  const [formData, setFormData] = useState({ name: "", email: "", phone: "" });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     createMutation.mutate({
       data: {
-        ...formData,
-        classesRemaining: parseInt(formData.classesRemaining)
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        plan: CreateClientBodyPlan.Mensual,
+        classesRemaining: 0,
       }
     }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListClientsQueryKey() });
         toast({ title: "Cliente creado exitosamente" });
         onOpenChange(false);
-        setFormData({
-          name: "", email: "", phone: "", plan: CreateClientBodyPlan.Mensual, classesRemaining: "12", notes: ""
-        });
+        setFormData({ name: "", email: "", phone: "" });
       },
       onError: () => {
         toast({ title: "Error", description: "No se pudo crear el cliente", variant: "destructive" });
@@ -374,24 +367,25 @@ function CreateClientDialog({ open, onOpenChange }: { open: boolean; onOpenChang
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[450px] rounded-2xl">
+      <DialogContent className="sm:max-w-[400px] rounded-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl">Nuevo Cliente</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6 py-4">
+        <form onSubmit={handleSubmit} className="space-y-5 py-4">
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nombre completo</Label>
-              <Input 
+              <Input
                 id="name" required value={formData.name}
                 onChange={e => setFormData({...formData, name: e.target.value})}
                 className="rounded-lg"
+                placeholder="Ej. María García"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Correo electrónico <span className="text-gray-400 font-normal">(opcional)</span></Label>
-              <Input 
+              <Input
                 id="email" type="email" value={formData.email}
                 onChange={e => setFormData({...formData, email: e.target.value})}
                 className="rounded-lg"
@@ -401,44 +395,11 @@ function CreateClientDialog({ open, onOpenChange }: { open: boolean; onOpenChang
 
             <div className="space-y-2">
               <Label htmlFor="phone">Teléfono</Label>
-              <Input 
+              <Input
                 id="phone" required value={formData.phone}
                 onChange={e => setFormData({...formData, phone: e.target.value})}
                 className="rounded-lg"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Plan</Label>
-                <Select value={formData.plan} onValueChange={v => setFormData({...formData, plan: v as CreateClientBodyPlan})}>
-                  <SelectTrigger className="rounded-lg">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(CreateClientBodyPlan).map(v => (
-                      <SelectItem key={v} value={v}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="classes">Clases Restantes</Label>
-                <Input 
-                  id="classes" type="number" required min="0" value={formData.classesRemaining}
-                  onChange={e => setFormData({...formData, classesRemaining: e.target.value})}
-                  className="rounded-lg"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notas (Opcional)</Label>
-              <Input 
-                id="notes" value={formData.notes}
-                onChange={e => setFormData({...formData, notes: e.target.value})}
-                placeholder="Lesiones, preferencias, etc."
-                className="rounded-lg"
+                placeholder="Ej. 6000-0000"
               />
             </div>
           </div>
