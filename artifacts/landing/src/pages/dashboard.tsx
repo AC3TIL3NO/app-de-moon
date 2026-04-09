@@ -10,6 +10,7 @@ import { useUser, useAuth, useClerk } from "@clerk/react";
 import { useClientContext } from "@/contexts/clientContext";
 import { API_BASE } from "@/lib/api";
 import { BookingModal } from "@/components/BookingModal";
+import { PaymentModal } from "@/components/PaymentModal";
 import { ProfileCompletion } from "@/components/ProfileCompletion";
 
 const NAV_ITEMS = [
@@ -73,6 +74,20 @@ export default function ClientDashboard() {
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<{ name: string; numericPrice: number; membershipId?: number } | null>(null);
+  const [availablePlans, setAvailablePlans] = useState<{ id: number; name: string; price: number; totalClasses: number; description: string; popular?: boolean }[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/memberships`)
+      .then(r => r.json())
+      .then((data: { id: number; name: string; price: number; totalClasses: number; description: string; isPublic: boolean; active: boolean }[]) => {
+        if (!Array.isArray(data)) return;
+        const pub = data.filter(p => p.isPublic && p.active).sort((a, b) => a.price - b.price);
+        setAvailablePlans(pub.map((p, i) => ({ ...p, popular: pub.length > 1 && i === Math.floor(pub.length / 2) })));
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -326,22 +341,23 @@ export default function ClientDashboard() {
                   </div>
                   <div className="bg-white rounded-2xl border border-gray-100 p-5">
                     <h3 className="font-semibold text-gray-900 mb-4">Planes disponibles</h3>
-                    {[
-                      { name: "Moon Start", price: "B/.120", classes: "8 clases/mes", desc: "Ideal para 2 clases por semana" },
-                      { name: "Moon Flow", price: "B/.160", classes: "12 clases/mes", desc: "Ideal para progreso constante", popular: true },
-                      { name: "Moon Unlimited", price: "B/.220", classes: "Ilimitadas", desc: "Incluye prioridad de reserva" },
-                    ].map(plan => (
-                      <div key={plan.name} className={`flex items-center justify-between p-3 rounded-xl mb-2 ${plan.popular ? "bg-amber-50 border border-amber-100" : "hover:bg-gray-50"} transition-colors`}>
+                    {availablePlans.map(plan => (
+                      <div key={plan.id} className={`flex items-center justify-between p-3 rounded-xl mb-2 ${plan.popular ? "bg-amber-50 border border-amber-100" : "hover:bg-gray-50"} transition-colors`}>
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-gray-900 text-sm">{plan.name}</span>
                             {plan.popular && <span className="text-xs bg-amber-100 text-[#C49A1E] px-2 py-0.5 rounded-full font-medium">Popular</span>}
                           </div>
-                          <div className="text-xs text-gray-400 mt-0.5">{plan.classes} · {plan.desc}</div>
+                          <div className="text-xs text-gray-400 mt-0.5">{plan.description.split("\n")[0]}</div>
                         </div>
                         <div className="text-right">
-                          <div className="font-bold text-gray-900">{plan.price}</div>
-                          <button className="text-xs text-[#C49A1E] font-semibold hover:underline mt-0.5">Cambiar</button>
+                          <div className="font-bold text-gray-900">B/. {plan.price.toFixed(2)}</div>
+                          <button
+                            onClick={() => { setSelectedPlan({ name: plan.name, numericPrice: plan.price, membershipId: plan.id }); setPaymentModalOpen(true); }}
+                            className="text-xs text-[#C49A1E] font-semibold hover:underline mt-0.5"
+                          >
+                            Adquirir
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -353,23 +369,22 @@ export default function ClientDashboard() {
                     <CreditCard className="h-8 w-8 text-[#C49A1E]" />
                   </div>
                   <h3 className="font-bold text-gray-900 mb-2">Sin membresía activa</h3>
-                  <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto">Adquiere un plan Moon para empezar a reservar tus clases de Pilates Reformer.</p>
+                  <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto">Adquiere un plan para empezar a reservar tus clases de Pilates Reformer.</p>
                   <div className="grid gap-3">
-                    {[
-                      { name: "Moon Start", price: "B/.120", classes: "8 clases al mes" },
-                      { name: "Moon Flow", price: "B/.160", classes: "12 clases al mes", popular: true },
-                      { name: "Moon Unlimited", price: "B/.220", classes: "Ilimitadas" },
-                    ].map(plan => (
-                      <div key={plan.name} className={`flex items-center justify-between p-4 rounded-2xl border text-left ${plan.popular ? "border-amber-200 bg-amber-50" : "border-gray-100"}`}>
+                    {availablePlans.map(plan => (
+                      <div key={plan.id} className={`flex items-center justify-between p-4 rounded-2xl border text-left ${plan.popular ? "border-amber-200 bg-amber-50" : "border-gray-100"}`}>
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-gray-900 text-sm">{plan.name}</span>
                             {plan.popular && <span className="text-xs bg-amber-100 text-[#C49A1E] px-2 py-0.5 rounded-full font-medium">Más popular</span>}
                           </div>
-                          <div className="text-xs text-gray-400 mt-0.5">{plan.classes}</div>
+                          <div className="text-xs text-gray-400 mt-0.5">{plan.description.split("\n")[0]}</div>
                         </div>
-                        <button className="h-9 px-4 bg-[#C49A1E] text-white text-xs font-bold rounded-xl hover:bg-[#b08a18] transition-colors">
-                          {plan.price}
+                        <button
+                          onClick={() => { setSelectedPlan({ name: plan.name, numericPrice: plan.price, membershipId: plan.id }); setPaymentModalOpen(true); }}
+                          className="h-9 px-4 bg-[#C49A1E] text-white text-xs font-bold rounded-xl hover:bg-[#b08a18] transition-colors shrink-0"
+                        >
+                          B/. {plan.price.toFixed(2)}
                         </button>
                       </div>
                     ))}
@@ -529,6 +544,22 @@ export default function ClientDashboard() {
           getToken().then(token => {
             const h = token ? { Authorization: `Bearer ${token}` } : {};
             fetch(`${API_BASE}/client/reservations`, { headers: h }).then(r => r.json()).then(setReservations);
+          });
+        }}
+      />
+
+      <PaymentModal
+        isOpen={paymentModalOpen}
+        plan={selectedPlan}
+        onClose={() => { setPaymentModalOpen(false); setSelectedPlan(null); }}
+        onSuccess={(method) => {
+          setPaymentModalOpen(false);
+          setSelectedPlan(null);
+          showToast(`Pago registrado. Tu membresía será activada pronto.`);
+          getToken().then(token => {
+            const h = token ? { Authorization: `Bearer ${token}` } : {};
+            fetch(`${API_BASE}/client/membership`, { headers: h }).then(r => r.json())
+              .then(data => setMembership(data && typeof data === "object" && data.id ? data : null));
           });
         }}
       />
