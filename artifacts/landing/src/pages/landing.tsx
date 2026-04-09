@@ -27,7 +27,7 @@ import studioBg from "@assets/40b756_4f1dc1bd9ca941efa4af8c07e580dd1b~mv2_177550
 import logoBlack from "@assets/Moon_Pilates_Studio_Logo_TEXTO_NEGRO_1775503679484.png";
 import studioVideo1 from "@assets/SaveClip.App_AQPAckGAJnE1YTcWTONhSiHHlu6nlJ_D6F5PKxkAx3PK0NqsY_1775523267244.mp4";
 import studioVideo2 from "@assets/SaveClip.App_AQPxkzPBIp53uUbHiaI0ROdTmasQyIvq6OrYuRNUFT4AmYBkf_1775523272265.mp4";
-import { useUser, useClerk } from "@clerk/react";
+import { useUser } from "@clerk/react";
 import { BookingModal } from "@/components/BookingModal";
 import { PaymentModal } from "@/components/PaymentModal";
 
@@ -290,10 +290,8 @@ export default function LandingPage() {
   const [selectedPlan, setSelectedPlan] = useState<PlanCard | null>(null);
   const [plans, setPlans] = useState<PlanCard[]>([]);
   const { user, isSignedIn } = useUser();
-  const { openSignIn } = useClerk();
   const [, navigate] = useLocation();
-  const basePath = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-  const handleSignIn = () => openSignIn({ redirectUrl: `${basePath}/dashboard` });
+  const handleSignIn = () => navigate("/sign-in");
 
   useEffect(() => {
     fetch(`${API_BASE}/memberships`)
