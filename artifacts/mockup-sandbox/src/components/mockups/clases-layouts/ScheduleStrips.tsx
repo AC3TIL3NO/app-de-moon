@@ -80,14 +80,14 @@ export function ScheduleStrips() {
               return (
                 <div
                   key={cls.id}
-                  className={\`group flex flex-col sm:flex-row sm:items-center p-0 \${
+                  className={`group flex flex-col sm:flex-row sm:items-center p-0 ${
                     isEven ? "bg-white" : "bg-slate-50/50"
-                  } border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors\`}
+                  } border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors`}
                 >
                   {/* Time Block (Left Anchor) */}
                   <div className="flex items-stretch w-full sm:w-auto">
                     {/* Color Accent Strip */}
-                    <div className={\`w-1.5 shrink-0 \${typeColors[cls.type] || "bg-slate-300"}\`} />
+                    <div className={`w-1.5 shrink-0 ${typeColors[cls.type] || "bg-slate-300"}`} />
                     
                     {/* Time Label */}
                     <div className="py-5 px-6 sm:w-32 shrink-0 flex flex-col justify-center">
@@ -113,7 +113,7 @@ export function ScheduleStrips() {
                         {cls.instructor}
                       </span>
                       <span className="text-slate-300 text-xs">•</span>
-                      <Badge variant="secondary" className={\`\${typeBadgeColors[cls.type]} font-medium border-0 shadow-none\`}>
+                      <Badge variant="secondary" className={`${typeBadgeColors[cls.type]} font-medium border-0 shadow-none`}>
                         {cls.type}
                       </Badge>
                       <Badge variant="outline" className="text-slate-500 border-slate-200 font-normal">
@@ -129,7 +129,7 @@ export function ScheduleStrips() {
                     <div className="flex items-center gap-3 min-w-[120px]">
                       <div className="flex items-center gap-1.5 text-sm font-medium">
                         <Users className="h-4 w-4 text-slate-400" />
-                        <span className={\`\${isFull ? 'text-rose-600' : 'text-slate-600'}\`}>
+                        <span className={`${isFull ? 'text-rose-600' : 'text-slate-600'}`}>
                           {cls.enrolled}
                         </span>
                         <span className="text-slate-400">/</span>
@@ -137,8 +137,8 @@ export function ScheduleStrips() {
                       </div>
                       <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden shrink-0">
                         <div 
-                          className={\`h-full rounded-full \${isFull ? 'bg-rose-500' : 'bg-slate-900'}\`} 
-                          style={{ width: \`\${Math.min((cls.enrolled / cls.capacity) * 100, 100)}%\` }}
+                          className={`h-full rounded-full ${isFull ? 'bg-rose-500' : 'bg-slate-900'}`} 
+                          style={{ width: `${Math.min((cls.enrolled / cls.capacity) * 100, 100)}%` }}
                         />
                       </div>
                     </div>
@@ -147,11 +147,11 @@ export function ScheduleStrips() {
                     <div className="hidden md:block min-w-[90px] text-right">
                       <Badge 
                         variant="outline" 
-                        className={\`
-                          \${cls.status === 'Activa' ? 'border-emerald-200 text-emerald-700 bg-emerald-50' : ''}
-                          \${cls.status === 'Completa' ? 'border-slate-200 text-slate-700 bg-slate-50' : ''}
-                          \${cls.status === 'Cancelada' ? 'border-rose-200 text-rose-700 bg-rose-50' : ''}
-                        \`}
+                        className={`
+                          ${cls.status === 'Activa' ? 'border-emerald-200 text-emerald-700 bg-emerald-50' : ''}
+                          ${cls.status === 'Completa' ? 'border-slate-200 text-slate-700 bg-slate-50' : ''}
+                          ${cls.status === 'Cancelada' ? 'border-rose-200 text-rose-700 bg-rose-50' : ''}
+                        `}
                       >
                         {isFull && cls.status === 'Activa' ? 'Completa' : cls.status}
                       </Badge>
