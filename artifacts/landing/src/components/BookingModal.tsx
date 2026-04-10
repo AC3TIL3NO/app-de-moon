@@ -5,17 +5,13 @@ import { useAuth, useUser } from "@clerk/react";
 import { API_BASE } from "@/lib/api";
 import { useClientContext } from "@/contexts/clientContext";
 import { PoliciesModal } from "@/components/PoliciesModal";
-import heroBg from "@assets/40b756_86a22044bf6b4d728b69b627f57b50ec~mv2_1775503320084.avif";
-import studioBg from "@assets/40b756_4f1dc1bd9ca941efa4af8c07e580dd1b~mv2_1775503621543.avif";
-
-const CLASS_PHOTOS = [heroBg, studioBg];
 
 interface ClassItem {
   id: number;
   name: string;
   instructor: string;
   time: string;
-  date: string;
+  date: string | null;
   dayOfWeek: string;
   capacity: number;
   enrolled: number;
@@ -31,11 +27,26 @@ interface BookingModalProps {
   onSuccess?: () => void;
 }
 
-const LEVELS: Record<string, string> = {
-  "Principiante": "bg-emerald-100 text-emerald-700",
-  "Intermedio": "bg-amber-100 text-amber-700",
-  "Avanzado": "bg-rose-100 text-rose-700",
-};
+const DAY_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+function sortAndGroupClasses(classes: ClassItem[]): { day: string; items: ClassItem[] }[] {
+  const sorted = [...classes].sort((a, b) => {
+    const da = DAY_ORDER.indexOf(a.dayOfWeek);
+    const db_ = DAY_ORDER.indexOf(b.dayOfWeek);
+    if (da !== db_) return da - db_;
+    return a.time.localeCompare(b.time);
+  });
+  const groups: { day: string; items: ClassItem[] }[] = [];
+  for (const cls of sorted) {
+    const last = groups[groups.length - 1];
+    if (last && last.day === cls.dayOfWeek) {
+      last.items.push(cls);
+    } else {
+      groups.push({ day: cls.dayOfWeek, items: [cls] });
+    }
+  }
+  return groups;
+}
 
 export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, onSuccess }: BookingModalProps) {
   const { user } = useUser();
@@ -159,10 +170,10 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
             <div className="flex-1 overflow-y-auto px-7 py-5">
               {/* Step: Select class */}
               {step === "select" && (
-                <div className="space-y-3">
+                <div className="space-y-5">
                   {loadingClasses ? (
                     Array.from({ length: 4 }).map((_, i) => (
-                      <div key={i} className="h-20 bg-gray-100 rounded-2xl animate-pulse" />
+                      <div key={i} className="h-16 bg-gray-100 rounded-2xl animate-pulse" />
                     ))
                   ) : classes.length === 0 ? (
                     <div className="text-center py-12 text-gray-400">
@@ -170,35 +181,51 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
                       <p>No hay clases disponibles por el momento.</p>
                     </div>
                   ) : (
-                    classes.map((cls, i) => (
-                      <motion.button
-                        key={cls.id}
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                        onClick={() => handleSelectClass(cls)}
-                        className="w-full flex items-start gap-4 p-3 rounded-2xl border border-gray-100 hover:border-amber-200 hover:shadow-md transition-all text-left group overflow-hidden"
-                      >
-                        <div className="h-16 w-20 rounded-xl overflow-hidden shrink-0 relative">
-                          <img
-                            src={CLASS_PHOTOS[i % CLASS_PHOTOS.length]}
-                            alt={cls.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                    sortAndGroupClasses(classes).map(group => (
+                      <div key={group.day}>
+                        {/* Day header */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{group.day}</span>
+                          <div className="flex-1 h-px bg-gray-100" />
+                          <span className="text-xs text-gray-400">{group.items.length} clase{group.items.length !== 1 ? "s" : ""}</span>
                         </div>
-                        <div className="flex-1 min-w-0 py-0.5">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <span className="font-semibold text-gray-900 text-sm">{cls.name}</span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${LEVELS[cls.level] ?? "bg-gray-100 text-gray-600"}`}>{cls.level}</span>
-                          </div>
-                          <div className="flex items-center gap-3 text-xs text-gray-500">
-                            <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{cls.time}</span>
-                            <span className="flex items-center gap-1"><User className="h-3 w-3" />{cls.instructor}</span>
-                            <span className="flex items-center gap-1"><Users className="h-3 w-3" />{cls.capacity - cls.enrolled} cupos</span>
-                          </div>
+                        <div className="space-y-2">
+                          {group.items.map(cls => {
+                            const spots = cls.capacity - cls.enrolled;
+                            const isFull = spots <= 0;
+                            return (
+                              <motion.button
+                                key={cls.id}
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.99 }}
+                                onClick={() => !isFull && handleSelectClass(cls)}
+                                disabled={isFull}
+                                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border transition-all text-left group
+                                  ${isFull
+                                    ? "border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed"
+                                    : "border-gray-100 hover:border-amber-200 hover:shadow-md cursor-pointer"}`}
+                              >
+                                {/* Time block */}
+                                <div className="shrink-0 w-14 h-12 rounded-xl bg-gray-900 flex flex-col items-center justify-center">
+                                  <span className="text-white text-sm font-bold leading-tight">{cls.time.slice(0, 5)}</span>
+                                </div>
+                                {/* Info */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-0.5">
+                                    <span className="font-semibold text-gray-900 text-sm">Clase</span>
+                                    {isFull && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">Llena</span>}
+                                  </div>
+                                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                                    <span className="flex items-center gap-1"><User className="h-3 w-3" />{cls.instructor ?? "Sin instructor"}</span>
+                                    <span className="flex items-center gap-1"><Users className="h-3 w-3" />{spots > 0 ? `${spots} cupos` : "Sin cupos"}</span>
+                                  </div>
+                                </div>
+                                {!isFull && <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-[#C49A1E] transition-colors shrink-0" />}
+                              </motion.button>
+                            );
+                          })}
                         </div>
-                        <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-[#C49A1E] transition-colors shrink-0 mt-4" />
-                      </motion.button>
+                      </div>
                     ))
                   )}
                 </div>
@@ -207,29 +234,23 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
               {/* Step: Confirm */}
               {step === "confirm" && selected && (
                 <div className="space-y-5">
-                  <div className="rounded-2xl overflow-hidden border border-amber-100">
-                    <div className="relative h-32">
-                      <img
-                        src={CLASS_PHOTOS[selected.id % CLASS_PHOTOS.length]}
-                        alt={selected.name}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 via-gray-900/30 to-transparent" />
-                      <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
-                        <div>
-                          <div className="font-bold text-white text-base leading-tight">{selected.name}</div>
-                          <div className="text-amber-300 text-xs font-medium mt-0.5">{selected.type} · {selected.level}</div>
-                        </div>
-                        <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${LEVELS[selected.level] ?? "bg-gray-100 text-gray-700"}`}>{selected.level}</span>
+                  <div className="rounded-2xl overflow-hidden border border-amber-100 bg-amber-50">
+                    <div className="flex items-center gap-4 p-4 border-b border-amber-100">
+                      <div className="shrink-0 w-14 h-14 rounded-xl bg-gray-900 flex flex-col items-center justify-center">
+                        <span className="text-white text-sm font-bold">{selected.time.slice(0, 5)}</span>
+                      </div>
+                      <div>
+                        <div className="font-bold text-gray-900 text-base">Clase</div>
+                        <div className="text-xs text-gray-500 mt-0.5">{selected.dayOfWeek}</div>
                       </div>
                     </div>
-                    <div className="bg-amber-50 p-4 space-y-3">
-                    <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div className="p-4">
+                    <div className="grid grid-cols-2 gap-3">
                       {[
                         { icon: Clock, label: "Hora", value: selected.time },
-                        { icon: User, label: "Instructor", value: selected.instructor },
+                        { icon: User, label: "Instructor", value: selected.instructor ?? "Sin instructor" },
                         { icon: Users, label: "Cupos", value: `${spots} disponibles` },
-                        { icon: Calendar, label: "Nivel", value: selected.level },
+                        { icon: Calendar, label: "Día", value: selected.dayOfWeek },
                       ].map(item => (
                         <div key={item.label} className="bg-white rounded-xl p-3">
                           <div className="flex items-center gap-1.5 mb-1">
@@ -345,7 +366,7 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
                   </div>
                   <h3 className="text-xl font-bold text-gray-900 mb-2">Reserva confirmada</h3>
                   <p className="text-gray-500 text-sm mb-1">
-                    <span className="font-semibold text-gray-700">{selected?.name}</span>
+                    <span className="font-semibold text-gray-700">Clase · {selected?.dayOfWeek}</span>
                   </p>
                   <p className="text-gray-400 text-sm mb-8">{date} · {selected?.time} · {selected?.instructor}</p>
                   <div className="flex gap-3">
