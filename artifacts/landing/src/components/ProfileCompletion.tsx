@@ -43,6 +43,7 @@ export function ProfileCompletion({ onComplete }: Props) {
         throw new Error(data.error ?? "Error al guardar");
       }
       onComplete();
+      window.location.reload();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al guardar el perfil");
     } finally {
