@@ -733,58 +733,28 @@ export default function LandingPage() {
 
       {/* CLASSES */}
       <section id="classes" className="py-28 px-6 bg-stone-50">
-        <div className="max-w-6xl mx-auto">
-          <AnimatedSection className="text-center mb-14">
-            <div className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-600 text-sm font-medium px-4 py-1.5 rounded-full mb-5">
+        <div className="max-w-2xl mx-auto text-center">
+          <AnimatedSection>
+            <div className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-600 text-sm font-medium px-4 py-1.5 rounded-full mb-6">
               <CalendarCheck2 className="h-3.5 w-3.5" />
-              Tipos de clases
+              Clases por horario
             </div>
-            <h2 className="text-4xl sm:text-5xl font-bold tracking-tight text-gray-900">
-              Encuentra tu clase perfecta
+            <h2 className="text-4xl sm:text-5xl font-bold tracking-tight text-gray-900 mb-5">
+              Elige el horario que mejor se adapte a ti
             </h2>
-            <p className="mt-4 text-lg text-gray-500 max-w-lg mx-auto">
-              Desde principiantes hasta avanzados. Siempre guiados por expertos.
+            <p className="text-lg text-gray-500 max-w-lg mx-auto mb-10">
+              Ofrecemos clases de Pilates Reformer en distintos horarios a lo largo del día. Revisa la disponibilidad y reserva tu lugar en minutos.
             </p>
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => handleReservar()}
+              className="inline-flex items-center gap-2 bg-[#C49A1E] text-white text-base font-bold px-8 py-4 rounded-2xl hover:bg-[#b08a18] transition-colors shadow-lg shadow-amber-200"
+            >
+              Reservar clase
+              <ArrowRight className="h-4 w-4" />
+            </motion.button>
           </AnimatedSection>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {CLASSES.map((cls, i) => (
-              <motion.div
-                key={cls.title}
-                variants={fadeUp}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: "-60px" }}
-                custom={i}
-                whileHover={{ scale: 1.025, y: -4 }}
-                className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 group transition-all duration-300"
-              >
-                <div className="h-44 bg-gradient-to-br from-violet-50 to-stone-100 relative overflow-hidden">
-                  <img src={i % 2 === 0 ? heroBg : studioBg} alt={cls.title} className="w-full h-full object-cover opacity-70 group-hover:opacity-85 transition-opacity duration-500 group-hover:scale-105 transform" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                  <div className="absolute top-4 left-4">
-                    <span className={`text-xs font-semibold px-3 py-1 rounded-full ${cls.badgeColor}`}>
-                      {cls.badge}
-                    </span>
-                  </div>
-                  <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-1.5">
-                    <span className="font-black text-violet-700 text-lg">{cls.price}</span>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">{cls.title}</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed mb-5">{cls.desc}</p>
-                  <button
-                    onClick={() => handleReservar(cls.title)}
-                    className="w-full flex items-center justify-center gap-1.5 bg-gray-900 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-violet-600 transition-colors"
-                  >
-                    Reservar
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
         </div>
       </section>
 
