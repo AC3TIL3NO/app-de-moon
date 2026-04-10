@@ -107,6 +107,17 @@ export default function Classes() {
   const getClass = (dayName: string, time: string) =>
     (classes ?? []).find((c) => c.dayOfWeek === dayName && c.time === time) ?? null;
 
+  function isSlotPast(date: string, time: string): boolean {
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    if (date < today) return true;
+    if (date === today) {
+      const [h, m] = time.split(":").map(Number);
+      return now.getHours() > h || (now.getHours() === h && now.getMinutes() >= m);
+    }
+    return false;
+  }
+
   const weekLabel = (() => {
     if (weekOffset === 0) return "Esta semana";
     if (weekOffset === 1) return "Próxima semana";
@@ -154,12 +165,16 @@ export default function Classes() {
                 <th className="w-20 border-b border-r border-border/40 bg-muted/30 p-3 text-center sticky left-0 z-10">
                   <Clock className="h-4 w-4 text-muted-foreground mx-auto" />
                 </th>
-                {weekDates.map(({ dayName, label }) => (
-                  <th key={dayName} className="border-b border-r last:border-r-0 border-border/40 bg-muted/30 p-3 text-center">
-                    <div className="text-sm font-semibold text-foreground">{dayName}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
-                  </th>
-                ))}
+                {weekDates.map(({ dayName, label, date }) => {
+                  const isToday = date === new Date().toISOString().slice(0, 10);
+                  return (
+                    <th key={dayName} className={`border-b border-r last:border-r-0 border-border/40 p-3 text-center ${isToday ? "bg-primary/10" : "bg-muted/30"}`}>
+                      <div className={`text-sm font-semibold ${isToday ? "text-primary" : "text-foreground"}`}>{dayName}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
+                      {isToday && <div className="text-[9px] font-bold text-primary uppercase tracking-wider mt-0.5">Hoy</div>}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -184,6 +199,7 @@ export default function Classes() {
                     }
 
                     const cls = getClass(dayName, slot.value);
+                    const isPast = isSlotPast(date, slot.value);
                     return (
                       <td key={dayName} className="border-b border-r last:border-r-0 border-border/40 p-1.5 align-top min-w-[100px]">
                         <SlotCell
@@ -195,6 +211,7 @@ export default function Classes() {
                           slotEnd={slot.end}
                           isAdmin={isAdmin}
                           canManage={canManage}
+                          isPast={isPast}
                           onSelect={(s) => setSelected(s)}
                         />
                       </td>
@@ -225,6 +242,7 @@ function SlotCell({
   slotEnd,
   isAdmin,
   canManage,
+  isPast,
   onSelect,
 }: {
   cls: PilatesClass | null;
@@ -235,11 +253,19 @@ function SlotCell({
   slotEnd: string;
   isAdmin: boolean;
   canManage: boolean;
+  isPast: boolean;
   onSelect: (s: SelectedSlot) => void;
 }) {
   const isFull = cls ? cls.enrolled >= cls.capacity : false;
 
   if (!cls) {
+    if (isPast) {
+      return (
+        <div className="w-full min-h-[72px] rounded-lg bg-muted/5 border border-dashed border-border/20 flex items-center justify-center opacity-30 cursor-default">
+          <span className="text-[10px] text-muted-foreground">—</span>
+        </div>
+      );
+    }
     return (
       <button
         onClick={() => canManage && onSelect({ dayName, date, time, cls: null })}
@@ -249,6 +275,27 @@ function SlotCell({
         {canManage && (
           <Plus className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary/60 transition-colors" />
         )}
+      </button>
+    );
+  }
+
+  if (isPast) {
+    return (
+      <button
+        onClick={() => onSelect({ dayName, date, time, cls })}
+        className="w-full text-left p-2.5 rounded-lg border border-border/30 bg-muted/20 min-h-[72px] flex flex-col justify-between opacity-60 hover:opacity-80 transition-opacity"
+      >
+        <div>
+          <div className="text-[11px] font-bold leading-tight text-muted-foreground">Clase</div>
+          <div className="text-[10px] text-muted-foreground/70 mt-0.5">{slotLabel} → {slotEnd}</div>
+        </div>
+        <div className="flex items-center gap-1 mt-2">
+          <Users className="h-3 w-3 text-muted-foreground/50" />
+          <span className="text-[11px] font-bold text-muted-foreground">
+            {cls.enrolled}/{cls.capacity}
+          </span>
+          <span className="text-[9px] text-muted-foreground/70 font-semibold uppercase tracking-wider ml-1">Finalizada</span>
+        </div>
       </button>
     );
   }
