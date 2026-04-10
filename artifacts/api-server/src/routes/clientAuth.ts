@@ -76,6 +76,37 @@ async function requireClientAuth(req: Request, res: Response, next: NextFunction
   }
 }
 
+// DELETE /api/client/cancel-registration — abandon incomplete registration
+router.delete("/client/cancel-registration", requireClientAuth, async (req, res): Promise<void> => {
+  const { clientId } = (req as any).client as ClientPayload;
+  const auth = getAuth(req);
+  const clerkUserId = auth?.userId;
+
+  // Only allow cancellation if profile is incomplete (no phone)
+  const clients = await db.select().from(clientsTable).where(eq(clientsTable.id, clientId)).limit(1);
+  if (!clients.length) { res.status(404).json({ error: "Cliente no encontrado" }); return; }
+
+  const c = clients[0]!;
+  if (c.phone) {
+    res.status(400).json({ error: "El perfil ya está completo y no puede cancelarse" });
+    return;
+  }
+
+  // Delete client record
+  await db.delete(clientsTable).where(eq(clientsTable.id, clientId));
+
+  // Delete Clerk user so they can re-register with the same email
+  if (clerkUserId) {
+    try {
+      await clerkClient.users.deleteUser(clerkUserId);
+    } catch {
+      // Non-fatal: client record is deleted, Clerk cleanup is best-effort
+    }
+  }
+
+  res.json({ success: true });
+});
+
 // PATCH /api/client/profile — complete or update profile
 router.patch("/client/profile", requireClientAuth, async (req, res): Promise<void> => {
   const { clientId } = (req as any).client as ClientPayload;

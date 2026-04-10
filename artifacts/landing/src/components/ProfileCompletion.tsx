@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useUser, useAuth } from "@clerk/react";
+import { useUser, useAuth, useClerk } from "@clerk/react";
 import { motion } from "framer-motion";
-import { User, Phone, Mail, ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
+import { User, Mail, ArrowRight, Loader2, Trash2 } from "lucide-react";
 import { API_BASE } from "@/lib/api";
 import logoBlack from "@assets/Moon_Pilates_Studio_Logo_TEXTO_NEGRO_1775503679484.png";
 
@@ -12,14 +12,33 @@ interface Props {
 export function ProfileCompletion({ onComplete }: Props) {
   const { user } = useUser();
   const { getToken } = useAuth();
+  const { signOut } = useClerk();
 
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
   const [lastName, setLastName] = useState(user?.lastName ?? "");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState("");
 
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
+
+  const handleCancel = async () => {
+    if (!confirm("¿Seguro que quieres cancelar el registro? Tu cuenta será eliminada y podrás registrarte de nuevo.")) return;
+    setCancelling(true);
+    try {
+      const token = await getToken();
+      await fetch(`${API_BASE}/client/cancel-registration`, {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    } catch {
+      // Best effort — proceed with sign out regardless
+    } finally {
+      await signOut();
+      window.location.href = window.location.origin + window.location.pathname.replace(/\/dashboard.*/, "/sign-up");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,7 +171,7 @@ export function ProfileCompletion({ onComplete }: Props) {
             {/* Submit */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || cancelling}
               className="w-full h-12 bg-[#C49A1E] text-white font-semibold rounded-xl hover:bg-[#b08a18] transition-colors flex items-center justify-center gap-2 disabled:opacity-60 mt-2"
             >
               {loading ? (
@@ -164,8 +183,21 @@ export function ProfileCompletion({ onComplete }: Props) {
           </form>
         </div>
 
+        {/* Cancel registration */}
+        <button
+          onClick={handleCancel}
+          disabled={cancelling || loading}
+          className="w-full mt-3 flex items-center justify-center gap-2 text-sm text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50 py-2"
+        >
+          {cancelling ? (
+            <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Cancelando...</>
+          ) : (
+            <><Trash2 className="h-3.5 w-3.5" /> Cancelar registro y volver</>
+          )}
+        </button>
+
         {/* Bottom note */}
-        <p className="text-center text-xs text-gray-400 mt-4">
+        <p className="text-center text-xs text-gray-400 mt-2">
           Moon Pilates Studio · Atrio Mall Costa del Este, Panamá
         </p>
       </motion.div>
