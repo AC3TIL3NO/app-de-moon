@@ -27,25 +27,29 @@ interface BookingModalProps {
   onSuccess?: () => void;
 }
 
-const DAY_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+const DAY_ES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const DAY_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
-function sortAndGroupClasses(classes: ClassItem[]): { day: string; items: ClassItem[] }[] {
-  const sorted = [...classes].sort((a, b) => {
-    const da = DAY_ORDER.indexOf(a.dayOfWeek);
-    const db_ = DAY_ORDER.indexOf(b.dayOfWeek);
-    if (da !== db_) return da - db_;
-    return a.time.localeCompare(b.time);
-  });
-  const groups: { day: string; items: ClassItem[] }[] = [];
-  for (const cls of sorted) {
-    const last = groups[groups.length - 1];
-    if (last && last.day === cls.dayOfWeek) {
-      last.items.push(cls);
-    } else {
-      groups.push({ day: cls.dayOfWeek, items: [cls] });
-    }
+function getNextDays(n: number): { date: Date; dayName: string; shortName: string; label: string }[] {
+  const days = [];
+  for (let i = 0; i < n; i++) {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + i);
+    days.push({
+      date: d,
+      dayName: DAY_ES[d.getDay()],
+      shortName: DAY_SHORT[d.getDay()],
+      label: i === 0 ? "Hoy" : i === 1 ? "Mañana" : DAY_SHORT[d.getDay()],
+    });
   }
-  return groups;
+  return days;
+}
+
+function isClassPassed(time: string): boolean {
+  const now = new Date();
+  const [h, m] = time.split(":").map(Number);
+  return now.getHours() > h || (now.getHours() === h && now.getMinutes() >= m);
 }
 
 export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, onSuccess }: BookingModalProps) {
@@ -62,6 +66,8 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
   const [noMembership, setNoMembership] = useState(false);
   const [policiesAccepted, setPoliciesAccepted] = useState(false);
   const [showPolicies, setShowPolicies] = useState(false);
+  const [days] = useState(() => getNextDays(7));
+  const [selectedDayIdx, setSelectedDayIdx] = useState(0);
 
   const alreadyAccepted = !!client?.policiesAcceptedAt;
 
@@ -77,6 +83,7 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
     setDate("");
     setError("");
     setNoMembership(false);
+    setSelectedDayIdx(0);
 
     getToken().then(token => {
       const h = token ? { Authorization: `Bearer ${token}` } : {};
@@ -90,7 +97,8 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
 
   const handleSelectClass = (cls: ClassItem) => {
     setSelected(cls);
-    setDate(cls.date ?? new Date().toISOString().slice(0, 10));
+    const pickedDate = days[selectedDayIdx].date;
+    setDate(pickedDate.toISOString().slice(0, 10));
     setStep("confirm");
   };
 
@@ -170,64 +178,95 @@ export function BookingModal({ isOpen, onClose, preselectedClass, onNeedAuth, on
             <div className="flex-1 overflow-y-auto px-7 py-5">
               {/* Step: Select class */}
               {step === "select" && (
-                <div className="space-y-5">
+                <div className="space-y-4">
+                  {/* Day picker */}
+                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                    {days.map((day, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedDayIdx(idx)}
+                        className={`shrink-0 flex flex-col items-center px-3.5 py-2.5 rounded-2xl border text-xs font-semibold transition-all
+                          ${selectedDayIdx === idx
+                            ? "bg-gray-900 border-gray-900 text-white shadow-md"
+                            : "bg-white border-gray-100 text-gray-500 hover:border-gray-300"}`}
+                      >
+                        <span className="text-[10px] font-bold uppercase tracking-wide opacity-70 mb-0.5">{day.shortName}</span>
+                        <span className="text-base font-bold leading-none">{day.date.getDate()}</span>
+                        {idx === 0 && (
+                          <span className={`text-[9px] mt-1 font-bold uppercase tracking-wide ${selectedDayIdx === 0 ? "text-amber-400" : "text-[#C49A1E]"}`}>
+                            Hoy
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Class list for selected day */}
                   {loadingClasses ? (
-                    Array.from({ length: 4 }).map((_, i) => (
+                    Array.from({ length: 3 }).map((_, i) => (
                       <div key={i} className="h-16 bg-gray-100 rounded-2xl animate-pulse" />
                     ))
-                  ) : classes.length === 0 ? (
-                    <div className="text-center py-12 text-gray-400">
-                      <Calendar className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                      <p>No hay clases disponibles por el momento.</p>
-                    </div>
-                  ) : (
-                    sortAndGroupClasses(classes).map(group => (
-                      <div key={group.day}>
-                        {/* Day header */}
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{group.day}</span>
-                          <div className="flex-1 h-px bg-gray-100" />
-                          <span className="text-xs text-gray-400">{group.items.length} clase{group.items.length !== 1 ? "s" : ""}</span>
+                  ) : (() => {
+                    const selectedDay = days[selectedDayIdx];
+                    const isToday = selectedDayIdx === 0;
+                    const dayClasses = classes
+                      .filter(c => c.dayOfWeek === selectedDay.dayName)
+                      .sort((a, b) => a.time.localeCompare(b.time));
+
+                    if (dayClasses.length === 0) {
+                      return (
+                        <div className="text-center py-10 text-gray-400">
+                          <Calendar className="h-9 w-9 mx-auto mb-3 opacity-40" />
+                          <p className="text-sm">No hay clases para el {selectedDay.dayName.toLowerCase()}</p>
                         </div>
-                        <div className="space-y-2">
-                          {group.items.map(cls => {
-                            const spots = cls.capacity - cls.enrolled;
-                            const isFull = spots <= 0;
-                            return (
-                              <motion.button
-                                key={cls.id}
-                                whileHover={{ scale: 1.01 }}
-                                whileTap={{ scale: 0.99 }}
-                                onClick={() => !isFull && handleSelectClass(cls)}
-                                disabled={isFull}
-                                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border transition-all text-left group
-                                  ${isFull
-                                    ? "border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed"
-                                    : "border-gray-100 hover:border-amber-200 hover:shadow-md cursor-pointer"}`}
-                              >
-                                {/* Time block */}
-                                <div className="shrink-0 w-14 h-12 rounded-xl bg-gray-900 flex flex-col items-center justify-center">
-                                  <span className="text-white text-sm font-bold leading-tight">{cls.time.slice(0, 5)}</span>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-2">
+                        {dayClasses.map(cls => {
+                          const spots = cls.capacity - cls.enrolled;
+                          const isFull = spots <= 0;
+                          const isPassed = isToday && isClassPassed(cls.time);
+                          const isDisabled = isFull || isPassed;
+
+                          return (
+                            <motion.button
+                              key={cls.id}
+                              whileHover={isDisabled ? {} : { scale: 1.01 }}
+                              whileTap={isDisabled ? {} : { scale: 0.99 }}
+                              onClick={() => !isDisabled && handleSelectClass(cls)}
+                              disabled={isDisabled}
+                              className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border transition-all text-left group
+                                ${isDisabled
+                                  ? "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
+                                  : "border-gray-100 hover:border-amber-200 hover:shadow-md cursor-pointer"}`}
+                            >
+                              {/* Time block */}
+                              <div className={`shrink-0 w-14 h-12 rounded-xl flex flex-col items-center justify-center ${isPassed ? "bg-gray-300" : "bg-gray-900"}`}>
+                                <span className="text-white text-sm font-bold leading-tight">{cls.time.slice(0, 5)}</span>
+                              </div>
+
+                              {/* Info */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                  <span className="font-semibold text-gray-900 text-sm">Clase</span>
+                                  {isPassed && <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-medium">Finalizada</span>}
+                                  {isFull && !isPassed && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">Llena</span>}
                                 </div>
-                                {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-0.5">
-                                    <span className="font-semibold text-gray-900 text-sm">Clase</span>
-                                    {isFull && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">Llena</span>}
-                                  </div>
-                                  <div className="flex items-center gap-3 text-xs text-gray-400">
-                                    <span className="flex items-center gap-1"><User className="h-3 w-3" />{cls.instructor ?? "Sin instructor"}</span>
-                                    <span className="flex items-center gap-1"><Users className="h-3 w-3" />{spots > 0 ? `${spots} cupos` : "Sin cupos"}</span>
-                                  </div>
+                                <div className="flex items-center gap-3 text-xs text-gray-400">
+                                  <span className="flex items-center gap-1"><User className="h-3 w-3" />{cls.instructor ?? "Sin instructor"}</span>
+                                  {!isPassed && <span className="flex items-center gap-1"><Users className="h-3 w-3" />{spots > 0 ? `${spots} cupos` : "Sin cupos"}</span>}
                                 </div>
-                                {!isFull && <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-[#C49A1E] transition-colors shrink-0" />}
-                              </motion.button>
-                            );
-                          })}
-                        </div>
+                              </div>
+
+                              {!isDisabled && <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-[#C49A1E] transition-colors shrink-0" />}
+                            </motion.button>
+                          );
+                        })}
                       </div>
-                    ))
-                  )}
+                    );
+                  })()}
                 </div>
               )}
 
