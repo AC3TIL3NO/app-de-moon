@@ -4,7 +4,8 @@ import { useLocation } from "wouter";
 import {
   Calendar, CreditCard, User, History, Receipt,
   LogOut, Clock, CheckCircle2,
-  XCircle, AlertCircle, Menu, X, Zap, Star, DollarSign, ArrowLeft
+  XCircle, AlertCircle, Menu, X, Zap, Star, DollarSign, ArrowLeft,
+  Dumbbell, Users, RefreshCw
 } from "lucide-react";
 import { useUser, useAuth, useClerk } from "@clerk/react";
 import { useClientContext } from "@/contexts/clientContext";
@@ -15,11 +16,14 @@ import { ProfileCompletion } from "@/components/ProfileCompletion";
 
 const NAV_ITEMS = [
   { id: "reservas", icon: Calendar, label: "Mis Reservas" },
+  { id: "clases", icon: Dumbbell, label: "Clases de Hoy" },
   { id: "membresia", icon: CreditCard, label: "Membresía" },
   { id: "pagos", icon: Receipt, label: "Pagos" },
   { id: "perfil", icon: User, label: "Perfil" },
   { id: "historial", icon: History, label: "Historial" },
 ];
+
+const DAYS_ES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
 interface Payment {
   id: number;
@@ -52,6 +56,21 @@ interface Membership {
   status: string;
 }
 
+interface TodayClass {
+  id: number;
+  name: string;
+  instructor: string | null;
+  time: string;
+  duration: number;
+  capacity: number;
+  enrolled: number;
+  level: string;
+  type: string;
+  status: string;
+  dayOfWeek: string;
+  date: string | null;
+}
+
 const STATUS_STYLE: Record<string, string> = {
   "Confirmada": "bg-emerald-100 text-emerald-700",
   "Cancelada": "bg-red-100 text-red-600",
@@ -77,6 +96,9 @@ export default function ClientDashboard() {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<{ name: string; numericPrice: number; membershipId?: number } | null>(null);
   const [availablePlans, setAvailablePlans] = useState<{ id: number; name: string; price: number; totalClasses: number; description: string; popular?: boolean }[]>([]);
+  const [todayClasses, setTodayClasses] = useState<TodayClass[]>([]);
+  const [loadingClasses, setLoadingClasses] = useState(false);
+  const [classesLastUpdated, setClassesLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/memberships`)
@@ -119,6 +141,34 @@ export default function ClientDashboard() {
         .finally(() => setLoadingPayments(false));
     });
   }, [isSignedIn, section, getToken]);
+
+  const fetchTodayClasses = () => {
+    if (!isSignedIn) return;
+    const todayStr = new Date().toISOString().split("T")[0];
+    const todayDay = DAYS_ES[new Date().getDay()];
+    setLoadingClasses(true);
+    fetch(`${API_BASE}/classes`)
+      .then(r => r.json())
+      .then((data: TodayClass[]) => {
+        if (!Array.isArray(data)) return;
+        const filtered = data.filter(c => {
+          const matchDate = c.date === todayStr;
+          const matchDay = !c.date && c.dayOfWeek === todayDay;
+          return (matchDate || matchDay) && c.status !== "Cancelada";
+        }).sort((a, b) => a.time.localeCompare(b.time));
+        setTodayClasses(filtered);
+        setClassesLastUpdated(new Date());
+      })
+      .catch(() => {})
+      .finally(() => setLoadingClasses(false));
+  };
+
+  useEffect(() => {
+    if (!isSignedIn || section !== "clases") return;
+    fetchTodayClasses();
+    const interval = setInterval(fetchTodayClasses, 30000);
+    return () => clearInterval(interval);
+  }, [isSignedIn, section]);
 
   const showToast = (msg: string, type: "success" | "error" = "success") => {
     setToast({ msg, type });
@@ -305,7 +355,148 @@ export default function ClientDashboard() {
             </div>
           )}
 
-          {/* Membresía */}
+          {/* Clases de Hoy */}
+          {section === "clases" && (
+            <div className="space-y-6 max-w-3xl">
+              {!membership ? (
+                <div className="bg-white rounded-3xl border border-gray-100 p-10 text-center">
+                  <div className="h-16 w-16 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
+                    <Dumbbell className="h-8 w-8 text-[#C49A1E]" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 mb-2">Necesitas un plan activo</h3>
+                  <p className="text-sm text-gray-500 mb-5">Adquiere una membresía para ver las clases disponibles hoy.</p>
+                  <button
+                    onClick={() => setSection("membresia")}
+                    className="h-10 px-6 bg-[#C49A1E] text-white text-sm font-bold rounded-xl hover:bg-[#b08a18] transition-colors"
+                  >
+                    Ver planes
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900">Clases de hoy</h2>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {new Date().toLocaleDateString("es-PA", { weekday: "long", day: "numeric", month: "long" })}
+                      </p>
+                    </div>
+                    <button
+                      onClick={fetchTodayClasses}
+                      disabled={loadingClasses}
+                      className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#C49A1E] transition-colors disabled:opacity-50"
+                    >
+                      <RefreshCw className={`h-3.5 w-3.5 ${loadingClasses ? "animate-spin" : ""}`} />
+                      {classesLastUpdated
+                        ? `Actualizado ${classesLastUpdated.toLocaleTimeString("es-PA", { hour: "2-digit", minute: "2-digit" })}`
+                        : "Actualizar"}
+                    </button>
+                  </div>
+
+                  {/* Live badge */}
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      En tiempo real · actualiza cada 30 s
+                    </span>
+                  </div>
+
+                  {/* Classes panel */}
+                  <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    {loadingClasses && todayClasses.length === 0 ? (
+                      <div className="space-y-0 divide-y divide-gray-50">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                          <div key={i} className="p-5 flex items-center gap-4 animate-pulse">
+                            <div className="h-12 w-12 bg-gray-100 rounded-xl shrink-0" />
+                            <div className="flex-1 space-y-2">
+                              <div className="h-3.5 bg-gray-100 rounded w-1/3" />
+                              <div className="h-2.5 bg-gray-100 rounded w-1/2" />
+                              <div className="h-2 bg-gray-100 rounded w-full mt-1" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : todayClasses.length === 0 ? (
+                      <div className="text-center py-14">
+                        <div className="h-12 w-12 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
+                          <Calendar className="h-6 w-6 text-gray-300" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-500">No hay clases programadas para hoy</p>
+                        <p className="text-xs text-gray-400 mt-1">Revisa mañana o contacta al estudio</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-gray-50">
+                        {todayClasses.map(cls => {
+                          const pct = cls.capacity > 0 ? Math.round((cls.enrolled / cls.capacity) * 100) : 0;
+                          const isFull = cls.enrolled >= cls.capacity;
+                          const isAlmostFull = pct >= 80 && !isFull;
+                          const barColor = isFull ? "bg-red-400" : isAlmostFull ? "bg-amber-400" : "bg-emerald-400";
+                          const spots = cls.capacity - cls.enrolled;
+                          return (
+                            <div key={cls.id} className="p-5 flex items-start gap-4 hover:bg-gray-50/60 transition-colors">
+                              {/* Time block */}
+                              <div className="shrink-0 w-14 h-14 rounded-xl bg-gray-900 flex flex-col items-center justify-center">
+                                <span className="text-white text-sm font-bold leading-tight">{cls.time.slice(0, 5)}</span>
+                                <span className="text-gray-400 text-[10px]">{cls.duration} min</span>
+                              </div>
+
+                              {/* Info */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-semibold text-gray-900 text-sm">{cls.name}</span>
+                                  <span className="text-xs bg-amber-50 text-[#C49A1E] border border-amber-100 px-2 py-0.5 rounded-full font-medium">{cls.type}</span>
+                                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{cls.level}</span>
+                                </div>
+                                <p className="text-xs text-gray-400 mt-0.5 truncate">
+                                  Instructor: {cls.instructor ?? "Por asignar"}
+                                </p>
+
+                                {/* Enrollment bar */}
+                                <div className="mt-2.5">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-xs text-gray-500 flex items-center gap-1">
+                                      <Users className="h-3 w-3" /> {cls.enrolled} / {cls.capacity} personas
+                                    </span>
+                                    <span className={`text-xs font-semibold ${isFull ? "text-red-500" : isAlmostFull ? "text-amber-600" : "text-emerald-600"}`}>
+                                      {isFull ? "Llena" : isAlmostFull ? `${spots} lugar${spots !== 1 ? "es" : ""} restante${spots !== 1 ? "s" : ""}` : `${spots} espacios libres`}
+                                    </span>
+                                  </div>
+                                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                                      style={{ width: `${Math.min(pct, 100)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Summary */}
+                  {todayClasses.length > 0 && (
+                    <div className="grid grid-cols-3 gap-4">
+                      {[
+                        { label: "Clases hoy", value: todayClasses.length, color: "text-gray-900" },
+                        { label: "Cupos disponibles", value: todayClasses.reduce((s, c) => s + Math.max(0, c.capacity - c.enrolled), 0), color: "text-emerald-600" },
+                        { label: "Clases llenas", value: todayClasses.filter(c => c.enrolled >= c.capacity).length, color: "text-red-500" },
+                      ].map(s => (
+                        <div key={s.label} className="bg-white rounded-2xl p-4 border border-gray-100 text-center">
+                          <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">{s.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
           {section === "membresia" && (
             <div className="max-w-2xl space-y-5">
               {membership ? (
