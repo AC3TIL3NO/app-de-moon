@@ -38,7 +38,7 @@ COPY . .
 
 # Build every package that exposes a build script
 # (typecheck is skipped here to keep CI fast; run it separately if needed)
-RUN PORT=3000 pnpm -r --if-present run build
+RUN PORT=3000 BASE_PATH=/ pnpm -r --if-present run build
 
 # ── Production image ──────────────────────────────────────────────────────────
 FROM base AS runner
