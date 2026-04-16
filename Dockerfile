@@ -33,6 +33,9 @@ RUN pnpm install --no-frozen-lockfile
 # ── Build ─────────────────────────────────────────────────────────────────────
 FROM deps AS builder
 
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 # Copy the full source tree on top of the installed node_modules
 COPY . .
 
