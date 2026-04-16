@@ -34,6 +34,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(clerkMiddleware());
 
+app.get("/", (_req, res) => {
+  res.send("API running");
+});
+
 app.use("/api", router);
 
 export default app;
