@@ -28,7 +28,16 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   }
 
   const user = users[0];
+
+  console.log("========== LOGIN DEBUG ==========");
+  console.log("USER FROM DB:", user);
+  console.log("PASSWORD INPUT:", password);
+  console.log("HASH EN DB:", user.passwordHash);
+
   const valid = await bcrypt.compare(password, user.passwordHash);
+
+  console.log("VALID RESULT:", valid);
+  console.log("================================");
 
   if (!valid) {
     res.status(401).json({ error: "Credenciales incorrectas" });

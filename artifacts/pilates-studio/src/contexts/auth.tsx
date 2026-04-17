@@ -23,7 +23,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const TOKEN_KEY = "pilates_token";
 const USER_KEY = "pilates_user";
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const rawApiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const API_BASE = rawApiUrl.endsWith("/api") ? rawApiUrl : `${rawApiUrl}/api`;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   console.log('[Auth] API_BASE:', API_BASE);
