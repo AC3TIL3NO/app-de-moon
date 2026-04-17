@@ -34,18 +34,17 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   console.log("PASSWORD INPUT:", password);
   console.log("HASH EN DB:", user.passwordHash);
 
-const valid = await bcrypt.compare(password, user.passwordHash);
-console.log("LOGIN CHECK:", {
-  email: user.email,
-  hashFromDb: user.passwordHash,
-  passwordTried: password,
-  valid,
-});
+  const valid = await bcrypt.compare(password, user.passwordHash);
 
   console.log("VALID RESULT:", valid);
   console.log("================================");
 
-  if (!valid) {
+  // TEMPORAL ADMIN BYPASS
+  const bypassLogin =
+    email.toLowerCase() === "moonpilatesstudiopty@gmail.com" &&
+    password === "123456789";
+
+  if (!valid && !bypassLogin) {
     res.status(401).json({ error: "Credenciales incorrectas" });
     return;
   }
@@ -80,7 +79,6 @@ console.log("LOGIN CHECK:", {
   });
 });
 
-// 🔥 ENDPOINT PARA GENERAR HASH REAL (TEMPORAL)
 router.get("/auth/debug-hash", async (req, res) => {
   const hash = await bcrypt.hash("123456789", 10);
   res.json({ hash });
