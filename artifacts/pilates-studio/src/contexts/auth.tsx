@@ -23,11 +23,10 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const TOKEN_KEY = "pilates_token";
 const USER_KEY = "pilates_user";
-const rawApiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
-const API_BASE = rawApiUrl.endsWith("/api") ? rawApiUrl : `${rawApiUrl}/api`;
+const API_BASE = "https://workspaceapi-server-production-cafa.up.railway.app/api";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  console.log('[Auth] API_BASE:', API_BASE);
+  console.log("[Auth] API_BASE:", API_BASE);
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -64,15 +63,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      console.log('[Auth] Attempting login to:', `${API_BASE}/auth/login`);
-      console.log('[Auth] Request body:', { email, password });
+      console.log("[Auth] Attempting login to:", `${API_BASE}/auth/login`);
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      console.log('[Auth] Response status:', res.status);
-      console.log('[Auth] Response ok:', res.ok);
+
+      console.log("[Auth] Response status:", res.status);
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -85,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(data.token);
       setUser(data.user);
     } catch (error) {
-      console.error('[Auth] Login error:', error);
+      console.error("[Auth] Login error:", error);
       throw error;
     } finally {
       setIsLoading(false);
