@@ -74,6 +74,12 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   });
 });
 
+// 🔥 ENDPOINT PARA GENERAR HASH REAL (TEMPORAL)
+router.get("/auth/debug-hash", async (req, res) => {
+  const hash = await bcrypt.hash("123456789", 10);
+  res.json({ hash });
+});
+
 router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
   res.json({
     id: req.user!.userId,
