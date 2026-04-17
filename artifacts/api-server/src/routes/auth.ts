@@ -34,7 +34,13 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   console.log("PASSWORD INPUT:", password);
   console.log("HASH EN DB:", user.passwordHash);
 
-  const valid = await bcrypt.compare(password, user.passwordHash);
+const valid = await bcrypt.compare(password, user.passwordHash);
+console.log("LOGIN CHECK:", {
+  email: user.email,
+  hashFromDb: user.passwordHash,
+  passwordTried: password,
+  valid,
+});
 
   console.log("VALID RESULT:", valid);
   console.log("================================");
