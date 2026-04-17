@@ -115,3 +115,4 @@ export function useRequireAuth(): AuthUser {
   if (!user) throw new Error("Not authenticated");
   return user;
 }
+console.log("DEPLOY NUEVO");
