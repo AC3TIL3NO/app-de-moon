@@ -157,6 +157,9 @@ importers:
 
   .:
     dependencies:
+      serve:
+        specifier: ^14.2.6
+        version: 14.2.6
       stripe:
         specifier: ^22.0.0
         version: 22.0.2(@types/node@25.6.0)
