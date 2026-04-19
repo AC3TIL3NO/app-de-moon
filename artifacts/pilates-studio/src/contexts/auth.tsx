@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 
+console.log("🔥 FRONTEND NUEVO ACTIVO 🔥");
+
 export interface AuthUser {
   id: number;
   email: string;
