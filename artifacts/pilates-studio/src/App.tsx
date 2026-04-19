@@ -17,7 +17,11 @@ import { setBaseUrl } from "@workspace/api-client-react";
 
 // Configuramos la URL de Railway para que customFetch sepa a dónde llamar
 // Usamos la variable de entorno que definimos en Railway
-setBaseUrl(import.meta.env.VITE_API_URL || "https://workspaceapi-server-production-cafa.up.railway.app");
+const API_BASE = import.meta.env.VITE_API_URL
+  ? import.meta.env.VITE_API_URL.replace(/\/?$/, "")
+  : import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates-studio$/, "") + "/api";
+
+setBaseUrl(API_BASE);
 
 const queryClient = new QueryClient();
 
