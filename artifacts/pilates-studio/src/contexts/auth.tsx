@@ -25,9 +25,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const TOKEN_KEY = "pilates_token";
 const USER_KEY = "pilates_user";
-const API_BASE = import.meta.env.VITE_API_URL
-  ? import.meta.env.VITE_API_URL.replace(/\/?$/, "")
-  : import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates-studio$/, "") + "/api";
+const API_BASE = "https://workspaceapi-server-production-cafa.up.railway.app/api";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   console.log("[Auth] API_BASE:", API_BASE);
