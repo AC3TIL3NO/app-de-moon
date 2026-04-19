@@ -13,6 +13,11 @@ import Memberships from "@/pages/memberships";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import Payments from "@/pages/payments";
+import { setBaseUrl } from "@workspace/api-client-react";
+
+// Configuramos la URL de Railway para que customFetch sepa a dónde llamar
+// Usamos la variable de entorno que definimos en Railway
+setBaseUrl(import.meta.env.VITE_API_URL || "https://workspaceapi-server-production-cafa.up.railway.app");
 
 const queryClient = new QueryClient();
 
