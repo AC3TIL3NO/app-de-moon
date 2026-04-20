@@ -518,6 +518,9 @@ function ClientMembershipsSection({ isAdmin }: { isAdmin: boolean }) {
 
   const { data: clientMemberships, isLoading } = useListClientMemberships();
   const deleteMutation = useDeleteClientMembership({
+
+  // Protección contra respuestas API malformadas
+  const safeClientMemberships = Array.isArray(clientMemberships) ? clientMemberships : [];
     mutation: {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: ["/client-memberships"] });
@@ -541,13 +544,13 @@ function ClientMembershipsSection({ isAdmin }: { isAdmin: boolean }) {
           <div className="space-y-3">
             {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
           </div>
-        ) : clientMemberships?.length === 0 ? (
+        ) : safeClientMemberships.length === 0 ? (
           <div className="text-center py-10 text-muted-foreground border border-dashed rounded-xl bg-muted/20 text-sm">
             No hay membresías de clientes registradas.
           </div>
         ) : (
           <div className="space-y-3">
-            {clientMemberships?.map((cm) => (
+            {safeClientMemberships.map((cm) => (
               <div key={cm.id} className="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-card hover:bg-accent/30 transition-colors">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">

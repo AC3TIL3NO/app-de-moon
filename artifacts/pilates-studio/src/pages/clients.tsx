@@ -167,6 +167,9 @@ function useMembershipByClient(clientId: number, enabled: boolean) {
 
 function ClientDetailsPanel({ client, open, onOpenChange }: { client: Client, open: boolean, onOpenChange: (open: boolean) => void }) {
   const { data: attendance, isLoading } = useGetClientAttendance(client.id, { query: { enabled: open } });
+
+  // Protección contra respuestas API malformadas
+  const safeAttendance = Array.isArray(attendance) ? attendance : [];
   const { membership, loading: membershipLoading } = useMembershipByClient(client.id, open);
   const deleteMutation = useDeleteClient();
   const queryClient = useQueryClient();
@@ -310,14 +313,14 @@ function ClientDetailsPanel({ client, open, onOpenChange }: { client: Client, op
                 <div className="space-y-3">
                   {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
                 </div>
-              ) : attendance?.length === 0 ? (
+              ) : safeAttendance.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-xl border border-dashed">
                   <CalendarCheck className="h-8 w-8 mx-auto mb-3 opacity-20" />
                   <p>No hay historial de asistencia.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {attendance?.map(record => (
+                  {safeAttendance.map(record => (
                     <div key={record.id} className="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-card">
                       <div>
                         <div className="font-medium text-sm">{record.className}</div>
