@@ -35,12 +35,15 @@ import { MembershipStatusCard, ClientMembership, computeMembershipStatus } from 
 const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates-studio$/, "") + "/api";
 
 export default function Clients() {
-  const { data: clients, isLoading } = useListClients();
+  const { data: rawClients, isLoading } = useListClients();
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   
-  const filteredClients = clients?.filter(c => 
+  // --- Normalización Centralizada ---
+  const clients = Array.isArray(rawClients) ? rawClients : [];
+  
+  const filteredClients = clients.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.phone.includes(searchTerm)

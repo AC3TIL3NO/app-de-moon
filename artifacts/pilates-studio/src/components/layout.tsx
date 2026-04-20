@@ -82,17 +82,28 @@ const BREADCRUMB_MAP: Record<string, string> = {
   "/settings": "Configuración",
 };
 
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+function getInitials(name: string | undefined | null): string {
+  if (!name) return "?";
+  try {
+    return name
+      .split(" ")
+      .filter(Boolean) // Evita espacios extra
+      .map((p) => p[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+  } catch (e) {
+    return name.charAt(0).toUpperCase() || "?";
+  }
 }
 
 function asArray<T>(value: unknown): T[] {
-  return Array.isArray(value) ? value : [];
+  if (Array.isArray(value)) return value;
+  // Si es un objeto que tiene una propiedad 'data' que es array (común en APIs)
+  if (value && typeof value === 'object' && 'data' in value && Array.isArray((value as any).data)) {
+    return (value as any).data;
+  }
+  return [];
 }
 
 function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -118,7 +129,7 @@ function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) 
   const [membershipLoading, setMembershipLoading] = useState(false);
 
   useEffect(() => {
-    setPaymentMethod(paymentMethods[0] ?? "Efectivo");
+    if (open) setPaymentMethod(paymentMethods[0] ?? "Efectivo");
   }, [open, paymentMethods]);
 
   const selectedPlan = plans.find((p) => String(p.id) === planId);
@@ -264,7 +275,7 @@ function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) 
                   <SelectValue placeholder="Seleccionar plan…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {plans.filter((p) => p.active).map((p) => (
+                  {plans.filter((p) => p && p.active).map((p) => (
                     <SelectItem key={p.id} value={String(p.id)}>
                       {p.name} — B/. {p.promoPrice ?? p.price}
                       {p.promoPrice != null ? ` (promo, orig. B/. ${p.price})` : ""}
@@ -315,9 +326,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { settings } = useStudio();
   const [cobrosOpen, setCobrosOpen] = useState(false);
 
-  const role = user?.role ?? "INSTRUCTOR";
-  const navigation = ALL_NAV.filter((item) => item.roles.includes(role));
-  const currentLabel = BREADCRUMB_MAP[location] ?? "";
+  const role = user?.role || "INSTRUCTOR";
+  const navigation = ALL_NAV.filter((item) => Array.isArray(item.roles) && item.roles.includes(role));
+  const currentLabel = BREADCRUMB_MAP[location] || "";
 
   const studioName = settings?.name ?? user?.studioName ?? "Pilates Studio";
   const logoUrl = settings?.logoUrl;

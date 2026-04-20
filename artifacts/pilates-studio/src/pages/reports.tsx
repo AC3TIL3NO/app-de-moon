@@ -32,7 +32,10 @@ function parseMonthStr(m: string): Date | null {
 }
 
 function filterByTab<T extends { month: string }>(data: T[], tab: number): T[] {
-  if (!data?.length) return data ?? [];
+  // Si 'data' no es array, devolvemos array vacío de una vez
+  if (!Array.isArray(data)) return [];
+  
+  if (!data.length) return data;
   const now = new Date();
   return data.filter(row => {
     const d = parseMonthStr(row.month);
