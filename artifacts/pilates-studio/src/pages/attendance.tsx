@@ -24,7 +24,7 @@ export default function Attendance() {
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const { data: classes, isLoading: classesLoading } = useListClasses();
 
-  const selectedClass = classes?.find((c) => c.id === selectedClassId);
+  const selectedClass = Array.isArray(classes) ? classes.find((c) => c.id === selectedClassId) : null;
 
   return (
     <motion.div
@@ -90,7 +90,7 @@ function ClassList({
       </div>
     );
   }
-  if (!classes?.length) {
+  if (!Array.isArray(classes) || !classes.length) {
     return (
       <div className="text-center py-16 text-muted-foreground border border-dashed rounded-2xl bg-muted/20 text-sm">
         No hay clases registradas.

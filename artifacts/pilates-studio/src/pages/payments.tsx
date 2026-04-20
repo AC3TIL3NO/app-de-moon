@@ -134,8 +134,8 @@ function RegisterPaymentModal({ onClose, onSaved, currentUser }: RegisterPayment
       fetch(`${API_BASE}/memberships`, { headers: h }).then(r => r.ok ? r.json() : []),
       fetch(`${API_BASE}/clients`, { headers: h }).then(r => r.ok ? r.json() : []),
     ]).then(([m, c]) => {
-      setPlans((m as MembershipPlan[]).filter(p => p.active));
-      setClients(c as Client[]);
+      setPlans(Array.isArray(m) ? (m as MembershipPlan[]).filter(p => p.active) : []);
+      setClients(Array.isArray(c) ? c as Client[] : []);
     });
   }, []);
 

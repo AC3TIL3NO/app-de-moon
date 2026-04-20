@@ -39,7 +39,7 @@ export default function CalendarPage() {
   const { data: classes, isLoading } = useListClasses();
 
   const getClassesForDay = (dayName: string) => {
-    if (!classes) return [];
+    if (!Array.isArray(classes)) return [];
     return classes.filter(c => c.dayOfWeek === dayName).sort((a, b) => a.time.localeCompare(b.time));
   };
 
