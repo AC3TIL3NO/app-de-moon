@@ -54,7 +54,7 @@ import { useListClients, useListMemberships } from "@workspace/api-client-react"
 import { useToast } from "@/hooks/use-toast";
 import { MembershipStatusCard, ClientMembership, computeMembershipStatus } from "@/components/membership-status-card";
 
-const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "").replace(/\/pilates-studio$/, "") + "/api";
+const API_BASE = "https://workspaceapi-server-production-cafa.up.railway.app/api";
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Administrador",
@@ -85,43 +85,60 @@ const BREADCRUMB_MAP: Record<string, string> = {
 function getInitials(name: string): string {
   return name
     .split(" ")
-    .map(p => p[0])
+    .map((p) => p[0])
     .slice(0, 2)
     .join("")
     .toUpperCase();
+}
+
+function asArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? value : [];
 }
 
 function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user } = useAuth();
   const { settings } = useStudio();
   const { toast } = useToast();
-  const { data: clients } = useListClients();
-  const { data: plans } = useListMemberships();
+  const { data: clientsRaw } = useListClients();
+  const { data: plansRaw } = useListMemberships();
 
-  const paymentMethods = settings?.paymentMethods ?? [
-    "Efectivo", "Yappy", "Visa", "Mastercard", "PayPal", "PagueloFacil", "Transferencia",
-  ];
+  const clients = asArray<any>(clientsRaw);
+  const plans = asArray<any>(plansRaw);
+
+  const paymentMethods = asArray<string>(settings?.paymentMethods).length > 0
+    ? asArray<string>(settings?.paymentMethods)
+    : ["Efectivo", "Yappy", "Visa", "Mastercard", "PayPal", "PagueloFacil", "Transferencia"];
 
   const [clientId, setClientId] = useState("");
   const [planId, setPlanId] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState(() => paymentMethods[0] ?? "Efectivo");
+  const [paymentMethod, setPaymentMethod] = useState("Efectivo");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [clientMembership, setClientMembership] = useState<ClientMembership | null>(null);
   const [membershipLoading, setMembershipLoading] = useState(false);
 
-  const selectedPlan = plans?.find(p => String(p.id) === planId);
-  const selectedClient = clients?.find(c => String(c.id) === clientId);
+  useEffect(() => {
+    setPaymentMethod(paymentMethods[0] ?? "Efectivo");
+  }, [open, paymentMethods]);
+
+  const selectedPlan = plans.find((p) => String(p.id) === planId);
+  const selectedClient = clients.find((c) => String(c.id) === clientId);
 
   useEffect(() => {
-    if (!clientId) { setClientMembership(null); return; }
+    if (!clientId) {
+      setClientMembership(null);
+      return;
+    }
+
     const numId = Number(clientId);
     if (!numId) return;
+
     setMembershipLoading(true);
     setClientMembership(null);
+
     fetch(`${API_BASE}/clients/${numId}/membership`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => setClientMembership(data as ClientMembership | null))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setClientMembership(data as ClientMembership | null))
       .catch(() => setClientMembership(null))
       .finally(() => setMembershipLoading(false));
   }, [clientId]);
@@ -131,12 +148,17 @@ function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) 
       toast({ title: "Selecciona cliente y plan.", variant: "destructive" });
       return;
     }
+
     setSaving(true);
+
     try {
       const token = localStorage.getItem("pilates_token");
       const res = await fetch(`${API_BASE}/payments/manual`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           clientId: Number(clientId),
           membershipId: Number(planId),
@@ -147,7 +169,9 @@ function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) 
           activateMembership: true,
         }),
       });
+
       if (!res.ok) throw new Error("Error al registrar cobro");
+
       setDone(true);
       toast({ title: "Cobro registrado correctamente." });
     } catch {
@@ -182,8 +206,9 @@ function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) 
             </div>
             <p className="font-semibold text-foreground">Cobro registrado</p>
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">{selectedClient?.name}</span> — {selectedPlan?.name}<br />
-              <span className="text-primary font-bold">B/. {selectedPlan?.price?.toFixed(2)}</span> · {paymentMethod}
+              <span className="font-medium text-foreground">{selectedClient?.name}</span> — {selectedPlan?.name}
+              <br />
+              <span className="text-primary font-bold">B/. {selectedPlan?.price?.toFixed?.(2) ?? selectedPlan?.price}</span> · {paymentMethod}
             </p>
             <Button className="mt-2 w-full" onClick={handleClose}>Cerrar</Button>
           </div>
@@ -206,14 +231,13 @@ function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) 
                   <SelectValue placeholder="Seleccionar cliente…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {clients?.map(c => (
+                  {clients.map((c) => (
                     <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Membership status after client selection */}
             {clientId && (
               membershipLoading ? (
                 <div className="h-14 rounded-xl bg-muted/40 border border-border/30 animate-pulse" />
@@ -240,7 +264,7 @@ function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) 
                   <SelectValue placeholder="Seleccionar plan…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {plans?.filter(p => p.active).map(p => (
+                  {plans.filter((p) => p.active).map((p) => (
                     <SelectItem key={p.id} value={String(p.id)}>
                       {p.name} — B/. {p.promoPrice ?? p.price}
                       {p.promoPrice != null ? ` (promo, orig. B/. ${p.price})` : ""}
@@ -257,7 +281,7 @@ function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) 
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {paymentMethods.map(m => (
+                  {paymentMethods.map((m) => (
                     <SelectItem key={m} value={m}>{m}</SelectItem>
                   ))}
                 </SelectContent>
@@ -267,7 +291,7 @@ function CobrosModal({ open, onClose }: { open: boolean; onClose: () => void }) 
             {selectedPlan && (
               <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 text-center">
                 <p className="text-xs text-muted-foreground mb-0.5">Total a cobrar</p>
-                <p className="text-2xl font-black text-primary">B/. {selectedPlan.price?.toFixed(2)}</p>
+                <p className="text-2xl font-black text-primary">B/. {selectedPlan.price?.toFixed?.(2) ?? selectedPlan.price}</p>
               </div>
             )}
 
@@ -292,7 +316,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [cobrosOpen, setCobrosOpen] = useState(false);
 
   const role = user?.role ?? "INSTRUCTOR";
-  const navigation = ALL_NAV.filter(item => item.roles.includes(role));
+  const navigation = ALL_NAV.filter((item) => item.roles.includes(role));
   const currentLabel = BREADCRUMB_MAP[location] ?? "";
 
   const studioName = settings?.name ?? user?.studioName ?? "Pilates Studio";
@@ -319,7 +343,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     src={logoUrl}
                     alt={studioName}
                     className="h-full w-full object-cover rounded-xl"
-                    onError={e => {
+                    onError={(e) => {
                       (e.target as HTMLImageElement).style.display = "none";
                       const parent = (e.target as HTMLElement).parentElement;
                       if (parent) {
