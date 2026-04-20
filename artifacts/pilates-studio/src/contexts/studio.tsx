@@ -27,7 +27,34 @@ const StudioContext = createContext<StudioContextValue>({
   refresh: () => {},
 });
 
-function hexToHsl(hex: string): string {
+function asArray<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value;
+  // Si es un objeto que tiene una propiedad 'data' que es array (común en APIs)
+  if (value && typeof value === 'object' && 'data' in value && Array.isArray((value as any).data)) {
+    return (value as any).data;
+  }
+  return [];
+}
+
+function normalizeSettings(raw: any): StudioSettings | null {
+  if (!raw || typeof raw !== 'object') return null;
+  try {
+    return {
+      id: raw.id ?? 0,
+      name: raw.name ?? 'Pilates Studio',
+      logoUrl: raw.logoUrl ?? null,
+      primaryColor: raw.primaryColor ?? '#7C3AED',
+      secondaryColor: raw.secondaryColor ?? '#F3F4F6',
+      phone: raw.phone ?? null,
+      email: raw.email ?? null,
+      address: raw.address ?? null,
+      cancellationPolicy: raw.cancellationPolicy ?? null,
+      paymentMethods: asArray<string>(raw.paymentMethods),
+    };
+  } catch {
+    return null;
+  }
+}
   const r = parseInt(hex.slice(1, 3), 16) / 255;
   const g = parseInt(hex.slice(3, 5), 16) / 255;
   const b = parseInt(hex.slice(5, 7), 16) / 255;
@@ -76,9 +103,12 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await fetch(`${API_BASE}/studio/settings`);
       if (res.ok) {
-        const data = await res.json() as StudioSettings;
-        setSettings(data);
-        applyColor(data.primaryColor);
+        const rawData = await res.json();
+        const data = normalizeSettings(rawData);
+        if (data) {
+          setSettings(data);
+          applyColor(data.primaryColor);
+        }
       }
     } catch {}
     finally { setLoading(false); }
