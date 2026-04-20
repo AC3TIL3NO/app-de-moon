@@ -42,12 +42,20 @@ function useCountUp(target: number | undefined, duration = 800) {
 
 export default function Dashboard() {
   const { data: summary, isLoading: loadingSummary } = useGetDashboardSummary();
-  const { data: todayClasses, isLoading: loadingClasses } = useGetTodayClasses();
-  const { data: recentClients, isLoading: loadingClients } = useGetRecentClients();
-  const { data: occupancy, isLoading: loadingOccupancy } = useGetDashboardOccupancy();
-  const { data: topClients, isLoading: loadingTopClients } = useGetDashboardTopClients();
-  const { data: weeklyAttendance, isLoading: loadingWeekly } = useGetDashboardWeeklyAttendance();
-  const { data: popularClasses, isLoading: loadingPopular } = useGetDashboardPopularClasses();
+  const { data: todayClassesData, isLoading: loadingClasses } = useGetTodayClasses();
+  const { data: recentClientsData, isLoading: loadingClients } = useGetRecentClients();
+  const { data: occupancyData, isLoading: loadingOccupancy } = useGetDashboardOccupancy();
+  const { data: topClientsData, isLoading: loadingTopClients } = useGetDashboardTopClients();
+  const { data: weeklyAttendanceData, isLoading: loadingWeekly } = useGetDashboardWeeklyAttendance();
+  const { data: popularClassesData, isLoading: loadingPopular } = useGetDashboardPopularClasses();
+
+  // Ensure all data is arrays to prevent .map() errors
+  const todayClasses = Array.isArray(todayClassesData) ? todayClassesData : [];
+  const recentClients = Array.isArray(recentClientsData) ? recentClientsData : [];
+  const occupancy = Array.isArray(occupancyData) ? occupancyData : [];
+  const topClients = Array.isArray(topClientsData) ? topClientsData : [];
+  const weeklyAttendance = Array.isArray(weeklyAttendanceData) ? weeklyAttendanceData : [];
+  const popularClasses = Array.isArray(popularClassesData) ? popularClassesData : [];
 
   return (
     <motion.div
@@ -82,13 +90,13 @@ export default function Dashboard() {
           <CardContent>
             {loadingClasses ? (
               <div className="space-y-4">{[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}</div>
-            ) : todayClasses?.length === 0 ? (
+            ) : todayClasses.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-dashed">
                 No hay clases programadas para hoy.
               </div>
             ) : (
               <div className="space-y-4">
-                {todayClasses?.map((cls) => (
+                {todayClasses.map((cls) => (
                   <motion.div
                     key={cls.id}
                     initial={{ opacity: 0, x: -8 }}
@@ -151,11 +159,11 @@ export default function Dashboard() {
                     <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-3 w-16" /></div>
                   </div>
                 ))}</div>
-              ) : recentClients?.length === 0 ? (
+              ) : recentClients.length === 0 ? (
                 <div className="text-center py-4 text-muted-foreground text-sm">No hay clientes recientes.</div>
               ) : (
                 <div className="space-y-6">
-                  {recentClients?.map((client) => (
+                  {recentClients.map((client) => (
                     <div key={client.id} className="flex items-center gap-4">
                       <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-medium shrink-0">
                         {client.name.charAt(0)}
@@ -181,7 +189,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="pt-2">
             {loadingWeekly ? <Skeleton className="h-52 w-full rounded-xl" /> :
-              !weeklyAttendance || weeklyAttendance.every(d => d.attended === 0) ? (
+              weeklyAttendance.length === 0 || weeklyAttendance.every(d => d.attended === 0) ? (
                 <div className="h-52 flex items-center justify-center text-muted-foreground text-sm border border-dashed rounded-xl bg-muted/20">
                   Sin datos de asistencia esta semana.
                 </div>
@@ -214,7 +222,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="pt-2">
             {loadingPopular ? <Skeleton className="h-52 w-full rounded-xl" /> :
-              !popularClasses || popularClasses.length === 0 ? (
+              popularClasses.length === 0 ? (
                 <div className="h-52 flex items-center justify-center text-muted-foreground text-sm border border-dashed rounded-xl bg-muted/20">
                   Sin datos de reservas disponibles.
                 </div>
@@ -247,7 +255,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="pt-2">
             {loadingOccupancy ? <Skeleton className="h-52 w-full rounded-xl" /> :
-              !occupancy || occupancy.length === 0 ? (
+              occupancy.length === 0 ? (
                 <div className="h-52 flex items-center justify-center text-muted-foreground text-sm border border-dashed rounded-xl bg-muted/20">
                   Sin datos de ocupación disponibles.
                 </div>
@@ -277,7 +285,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="pt-2">
             {loadingTopClients ? <Skeleton className="h-52 w-full rounded-xl" /> :
-              !topClients || topClients.length === 0 ? (
+              topClients.length === 0 ? (
                 <div className="h-52 flex items-center justify-center text-muted-foreground text-sm border border-dashed rounded-xl bg-muted/20">
                   Sin datos de asistencia disponibles.
                 </div>
